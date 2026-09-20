@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "operation": "replace-unique",
+  "path": "skills/skill-routing/SKILL.md",
+  "expected_source_git_blob_sha": "8100af34ed9ca3880aa69ee436072463cf106dca",
+  "old": "2> prefer the skill that owns the current concrete gate;",
+  "new": "2. prefer the skill that owns the current concrete gate;"
+}
