@@ -1,0 +1,69 @@
+openapi: 3.1.0
+info:
+  title: Repository Verification Gateway
+  version: 1.0.0
+  description: Start and inspect exact-SHA repository verification runs. The gateway never exposes its GitHub credential.
+servers:
+  - url: https://REPLACE_WITH_GATEWAY_DOMAIN
+paths:
+  /api/capabilities:
+    get:
+      operationId: getVerificationCapabilities
+      summary: Describe verification capabilities.
+      parameters:
+        - $ref: '#/components/parameters/VerificationKey'
+      responses:
+        '200': { description: Verification capabilities }
+  /api/runs:
+    post:
+      operationId: startVerification
+      summary: Start verification for an allowlisted repository and exact commit SHA.
+      parameters:
+        - $ref: '#/components/parameters/VerificationKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [repository, sha, branch, profile]
+              properties:
+                repository: { type: string, description: Exact allowlisted owner/repo. }
+                sha: { type: string, pattern: '^[0-9a-fA-F]{40}$' }
+                branch: { type: string, description: Branch that must still equal the tested SHA for certification. }
+                profile: { type: string, default: full }
+                requireExactHead: { type: boolean, default: true }
+      responses:
+        '202': { description: Verification dispatched; returns opaque signed run id. }
+  /api/run:
+    get:
+      operationId: getVerificationRun
+      summary: Get verification status and exact-SHA certification state.
+      parameters:
+        - $ref: '#/components/parameters/VerificationKey'
+        - name: id
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Verification status }
+  /api/evidence:
+    get:
+      operationId: getVerificationEvidence
+      summary: Get job/step outcomes and durable artifact inventory for a verification run.
+      parameters:
+        - $ref: '#/components/parameters/VerificationKey'
+        - name: id
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Status, jobs, steps, and artifact metadata }
+components:
+  parameters:
+    VerificationKey:
+      name: X-Verification-Key
+      in: header
+      required: true
+      schema: { type: string }
+      description: Gateway API key. Configure it as Action authentication; never place the key in GPT instructions.

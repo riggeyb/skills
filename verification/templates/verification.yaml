@@ -1,0 +1,28 @@
+version: 1
+
+profiles:
+  focused:
+    preflight:
+      - name: repository-status
+        run: git status --short
+    static: []
+    unit: []
+
+  full:
+    preflight:
+      - name: repository-status
+        run: git status --short
+    static:
+      - name: example-static-check
+        run: echo 'Replace with repository static checks'
+    unit:
+      - name: example-unit-check
+        run: echo 'Replace with repository unit tests'
+    contract: []
+    mutation: []
+    integration: []
+    build: []
+    browser: []
+    smoke: []
+    security: []
+    determinism: []
