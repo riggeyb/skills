@@ -31,7 +31,7 @@ jobs:
 
       - name: Run repository verification profile
         id: verify
-        uses: riggeyb/skills/verification/action@REPLACE_WITH_REVIEWED_SKILLS_COMMIT
+        uses: riggeyb/skills/verification/action@a9db53dd65970e925721439c1dfdc81d98334455
         with:
           profile: ${{ github.event.client_payload.profile }}
           verification-id: ${{ github.event.client_payload.verification_id }}
