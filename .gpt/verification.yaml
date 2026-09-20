@@ -1,0 +1,57 @@
+version: 1
+
+profiles:
+  focused:
+    preflight:
+      - name: registry-static
+        run: python3 scripts/validate_registry.py
+      - name: eval-definitions
+        run: python3 scripts/check_evals.py
+    static:
+      - name: gateway-typecheck
+        run: cd verification-gateway && npm install --no-audit --no-fund && npm run typecheck
+    unit:
+      - name: gateway-tests
+        run: cd verification-gateway && npm test
+
+  full:
+    preflight:
+      - name: registry-static
+        run: python3 scripts/validate_registry.py
+      - name: eval-definitions
+        run: python3 scripts/check_evals.py
+    static:
+      - name: gateway-typecheck
+        run: cd verification-gateway && npm install --no-audit --no-fund && npm run typecheck
+      - name: python-compile
+        run: python3 -m py_compile scripts/validate_registry.py scripts/check_evals.py verification/action/runner.py
+    unit:
+      - name: gateway-tests
+        run: cd verification-gateway && npm test
+    contract:
+      - name: registry-remote-contract
+        run: python3 scripts/validate_registry.py --remote
+    mutation:
+      - name: runner-deliberate-failure-proof
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          mkdir -p "$tmp/.gpt"
+          cat > "$tmp/.gpt/verification.yaml" <<'YAML'
+          version: 1
+          profiles:
+            full:
+              mutation:
+                - run: exit 9
+          YAML
+          if (cd "$tmp" && VERIFICATION_PROFILE=full python3 "$OLDPWD/verification/action/runner.py"); then
+            echo 'runner accepted a deliberate failure'
+            exit 1
+          fi
+    security:
+      - name: no-gateway-secrets-in-source
+        run: |
+          set -euo pipefail
+          ! grep -R --line-number --exclude='README.md' --exclude='*.yaml' --exclude='*.yml' \
+            -E 'gh[pousr]_[A-Za-z0-9_]{20,}|VERIFICATION_SIGNING_SECRET=[^<[:space:]]+' \
+            verification-gateway verification
