@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "operation": "insert-after-unique",
+  "path": "registry.yaml",
+  "expected_source_git_blob_sha": "4b596194c5a66b7987d0ce06d7289583d9988954",
+  "anchor": "    triggers: [tools, API calls, actions, retries, verification, error recovery, coding with tools, browser automation]\n",
+  "insertion": "\n\n  - id: skill-routing\n    title: Skill Routing and Composition\n    repository: riggeyb/skills\n    category: runtime-control\n    mode: instruction\n    trust: first-party\n    update_policy: reviewed\n    last_reviewed: \"2026-09-20\"\n    ref: main\n    entrypoints:\n      - skills/skill-routing/SKILL.md\n    triggers: [skill routing, skill selection, skill composition, skill budget, progressive loading, handoff, orchestration, runtime routing]\n"
+}

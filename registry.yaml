@@ -52,6 +52,20 @@ skills:
       - skills/tool-use-loop/SKILL.md
     triggers: [tools, API calls, actions, retries, verification, error recovery, coding with tools, browser automation]
 
+
+  - id: skill-routing
+    title: Skill Routing and Composition
+    repository: riggeyb/skills
+    category: runtime-control
+    mode: instruction
+    trust: first-party
+    update_policy: reviewed
+    last_reviewed: "2026-09-20"
+    ref: main
+    entrypoints:
+      - skills/skill-routing/SKILL.md
+    triggers: [skill routing, skill selection, skill composition, skill budget, progressive loading, handoff, orchestration, runtime routing]
+
   - id: repository-engineering
     title: Repository Engineering
     repository: riggeyb/skills
