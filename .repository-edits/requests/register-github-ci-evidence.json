@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "operation": "insert-before-unique",
+  "target": "registry.yaml",
+  "expected_source_git_blob_sha": "72ab5903ba221f0443d5732fd5f87d5f6c447138",
+  "anchor": "  - id: director-certification\n    title: Director Certification",
+  "insertion": "  - id: github-ci-evidence\n    title: GitHub CI Evidence\n    repository: rigggeyb/skills\n    category: repository-engineering\n    mode: instruction\n    trust: first-party\n    update_policy: reviewed\n    last_reviewed: \"2026-09-20\"\n    ref: main\n    entrypoints:\n      - skills/github-ci-evidence/SKILL.md\n    triggers: [GitHub CI, GitHub Actions, workflow runs, workflow jobs, check runs, commit status, exact SHA, CI failure, CI diagnosis, stale CI, missing workflow]\n\n"
+}
