@@ -156,6 +156,20 @@ skills:
       - skills/architecture-reasoning/SKILL.md
     triggers: [software architecture, architecture reasoning, system design, component boundary, ownership, invariants, coupling, data flow, contract design, migration design, abstraction, design tradeoffs]
 
+  - id: frontend-verification
+    title: Frontend Verification
+    repository: riggeyb/skills
+    category: repository-engineering
+    mode: instruction
+    trust: first-party
+    update_policy: reviewed
+    last_reviewed: "2026-09-20"
+    ref: main
+    entrypoints:
+      - skills/frontend-verification/SKILL.md
+    triggers: [frontend verification, UI verification, browser verification, visual regression, responsive UI, interaction testing, rendered UI, console errors, accessibility verification, viewport testing]
+
+
 
 
 
