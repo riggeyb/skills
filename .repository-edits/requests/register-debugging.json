@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "operation": "insert-after-unique",
+  "path": "registry.yaml",
+  "expected_source_git_blob_sha": "7ca5e19a06055fdf0d0164f9071f97aed633cd69",
+  "anchor": "  - id: change-analysis\n    title: Codebase Change Analysis\n    repository: riggeyb/skills\n    category: repository-engineering\n    mode: instruction\n    trust: first-party\n    update_policy: reviewed\n    last_reviewed: \"2026-09-20\"\n    ref: main\n    entrypoints:\n      - skills/change-analysis/SKILL.md\n    triggers: [implementation planning, codebase analysis, change analysis, impact analysis, trace behavior, call path, dependency analysis, edit plan, affected files, codebase understanding]\n",
+  "insertion": "\n  - id: debugging\n    title: Systematic Debugging\n    repository: riggeyb/skills\n    category: repository-engineering\n    mode: instruction\n    trust: first-party\n    update_policy: reviewed\n    last_reviewed: \"2026-09-20\"\n    ref: main\n    entrypoints:\n      - skills/debugging/SKILL.md\n    triggers: [debugging, root cause, bug, failing test, error, crash, flaky test, intermittent failure, reproduce bug, regression, diagnose failure]\n\n"
+}

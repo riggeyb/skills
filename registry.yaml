@@ -130,6 +130,20 @@ skills:
       - skills/change-analysis/SKILL.md
     triggers: [implementation planning, codebase analysis, change analysis, impact analysis, trace behavior, call path, dependency analysis, edit plan, affected files, codebase understanding]
 
+  - id: debugging
+    title: Systematic Debugging
+    repository: riggeyb/skills
+    category: repository-engineering
+    mode: instruction
+    trust: first-party
+    update_policy: reviewed
+    last_reviewed: "2026-09-20"
+    ref: main
+    entrypoints:
+      - skills/debugging/SKILL.md
+    triggers: [debugging, root cause, bug, failing test, error, crash, flaky test, intermittent failure, reproduce bug, regression, diagnose failure]
+
+
 
 
 
