@@ -45,19 +45,8 @@ export function assertPath(path: string): void {
   if (!PATH_RE.test(path)) throw Object.assign(new Error('Invalid repository path'), { statusCode: 400 });
 }
 
-export function protectedBranches(): string[] {
-  return (process.env.GITHUB_WRITER_PROTECTED_BRANCHES ?? 'main,master').split(',').map((x) => x.trim()).filter(Boolean);
-}
-
-export function assertWritableBranch(branch: string): void {
-  assertBranch(branch);
-  if (protectedBranches().includes(branch)) {
-    throw Object.assign(new Error(`Direct writes to protected branch are disabled: ${branch}`), { statusCode: 403 });
-  }
-}
-
 export function writerLimits(): { maxChanges: number; maxBytes: number } {
-  const maxChanges = Number(process.env.GITHUB_WRITER_MAX_CHANGES ?? 50);
-  const maxBytes = Number(process.env.GITHUB_WRITER_MAX_BYTES ?? 1_000_000);
+  const maxChanges = Number(process.env.GITHUB_WRITER_MAX_CHANGES ?? 100);
+  const maxBytes = Number(process.env.GITHUB_WRITER_MAX_BYTES ?? 2_000_000);
   return { maxChanges, maxBytes };
 }
