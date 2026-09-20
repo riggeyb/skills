@@ -1,0 +1,93 @@
+version: 1
+
+manifest:
+  name: custom-gpt-runtime-capabilities
+  description: >-
+    Conservative capability inventory for skills loaded through the GitHub Skills
+    Action. Skills describe how to work; this file describes what the runtime is
+    actually known to be able to do.
+  last_reviewed: "2026-09-20"
+
+statuses:
+  available: The capability is provided by the configured GitHub Skills Action.
+  unavailable: The capability is not provided by the GitHub Skills Action.
+  runtime_dependent: Use only if an explicit tool for the capability is present in the current GPT session.
+
+capabilities:
+  skills_registry_read:
+    status: available
+    provider: github-skills-action
+    mutating: false
+    scope:
+      - riggeyb/skills registry and policy files
+
+  github_repository_read:
+    status: available
+    provider: github-skills-action
+    mutating: false
+    scope:
+      - repositories explicitly registered in registry.yaml
+      - paths permitted by registry.yaml and policies/skill-loading.md
+
+  github_tree_discovery:
+    status: available
+    provider: github-skills-action
+    mutating: false
+    scope:
+      - registered repositories only
+      - skill_globs and reference_globs discovery only
+
+  github_repository_write:
+    status: unavailable
+    provider: github-skills-action
+    mutating: true
+    override_if_explicit_tool_present: true
+    note: >-
+      This read-only Action cannot create commits, branches, issues, pull requests,
+      or modify repository files. A separately configured tool may provide those
+      capabilities and must be checked independently.
+
+  arbitrary_http_requests:
+    status: unavailable
+    provider: github-skills-action
+    mutating: false
+    override_if_explicit_tool_present: true
+
+  shell_execution:
+    status: runtime_dependent
+    mutating: true
+
+  python_execution:
+    status: runtime_dependent
+    mutating: true
+
+  browser_automation:
+    status: runtime_dependent
+    mutating: true
+
+  web_search:
+    status: runtime_dependent
+    mutating: false
+
+  image_generation:
+    status: runtime_dependent
+    mutating: true
+
+  file_reading:
+    status: runtime_dependent
+    mutating: false
+
+  external_app_actions:
+    status: runtime_dependent
+    mutating: true
+
+policy:
+  require_capability_check_before_tool_use: true
+  unavailable_behavior: >-
+    Do not claim, simulate, or imply that an unavailable capability was executed.
+    Explain the limitation or use an available alternative.
+  runtime_dependent_behavior: >-
+    Verify that a concrete tool is actually available in the current session before
+    relying on the capability. Skill text alone never creates a capability.
+  skill_tool_declarations_are_advisory: true
+  success_requires_observed_evidence: true
