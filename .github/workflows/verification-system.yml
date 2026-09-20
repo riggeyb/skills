@@ -1,0 +1,110 @@
+name: Verification system
+
+on:
+  push:
+    branches: [verification-system-v1]
+    paths:
+      - 'verification-gateway/**'
+      - 'verification/**'
+      - 'openapi/verification-gateway-action.yaml'
+      - '.github/workflows/verification-system.yml'
+  pull_request:
+    paths:
+      - 'verification-gateway/**'
+      - 'verification/**'
+      - 'openapi/verification-gateway-action.yaml'
+      - '.github/workflows/verification-system.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  gateway:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install gateway dependencies
+        working-directory: verification-gateway
+        run: npm install --no-audit --no-fund
+      - name: Typecheck gateway
+        working-directory: verification-gateway
+        run: npm run typecheck
+      - name: Test signed run IDs
+        working-directory: verification-gateway
+        run: npm test
+
+  runner:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'PyYAML>=6,<7'
+      - name: Prove good verification profile passes
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          mkdir -p "$tmp/.gpt"
+          cat > "$tmp/.gpt/verification.yaml" <<'YAML'
+          version: 1
+          profiles:
+            full:
+              preflight:
+                - name: pass
+                  run: echo preflight-ok
+              unit:
+                - name: pass-unit
+                  run: python3 -c "assert 2 + 2 == 4"
+          YAML
+          (
+            cd "$tmp"
+            VERIFICATION_PROFILE=full VERIFICATION_ID=self-test \
+              python3 "$GITHUB_WORKSPACE/verification/action/runner.py"
+          )
+          python3 - <<PY
+          import json
+          from pathlib import Path
+          p = Path('$tmp/.verification-evidence/verification-summary.json')
+          d = json.loads(p.read_text())
+          assert d['result'] == 'PASS', d
+          assert d['verification_id'] == 'self-test', d
+          PY
+
+      - name: Prove broken verification profile fails
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          mkdir -p "$tmp/.gpt"
+          cat > "$tmp/.gpt/verification.yaml" <<'YAML'
+          version: 1
+          profiles:
+            full:
+              mutation:
+                - name: deliberate-break
+                  run: exit 7
+          YAML
+          if (
+            cd "$tmp"
+            VERIFICATION_PROFILE=full VERIFICATION_ID=mutation-test \
+              python3 "$GITHUB_WORKSPACE/verification/action/runner.py"
+          ); then
+            echo 'ERROR: verifier accepted a deliberately failing profile'
+            exit 1
+          fi
+          python3 - <<PY
+          import json
+          from pathlib import Path
+          p = Path('$tmp/.verification-evidence/verification-summary.json')
+          d = json.loads(p.read_text())
+          assert d['result'] == 'FAIL', d
+          assert d['stages'][0]['commands'][0]['exit_code'] == 7, d
+          PY
+
+      - name: Validate profile schema JSON
+        run: python3 -m json.tool verification/profile.schema.json >/dev/null
