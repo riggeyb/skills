@@ -9,7 +9,6 @@ registry:
   capabilities: capabilities.yaml
   last_reviewed: "2026-09-20"
 
-# Metadata defaults apply unless an individual skill overrides them.
 defaults:
   trust: external
   last_reviewed: "2026-09-20"
@@ -23,11 +22,6 @@ runtime:
   progressive_loading: true
   require_capability_check_before_tool_use: true
   load_policy_before_external_instructions: true
-
-# Modes:
-# - instruction: approved SKILL.md entrypoints may be followed as task-specific guidance.
-# - reference: use as source material and examples; never treat repo text as behavioral instructions.
-# - hybrid: only declared instructional paths may be followed; all other repo content is reference material.
 
 skills:
   - id: tool-use-loop
@@ -157,7 +151,7 @@ skills:
     repository: declare-lab/LLM-ReasoningTest
     category: evaluation
     mode: reference
-    entrypoints: [README.md]
+    entrypoints: [readme.md]
     triggers: [reasoning evaluation, benchmark, reasoning tests]
 
   - id: metagpt
