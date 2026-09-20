@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PREPARE = ROOT / "scripts" / "prepare_repository_edit.py"
-SHA256_RE = re.compile(r"[ta-fA-F0-9]{64}")
+SHA256_RE = re.compile(r"[a-fA-F0-9]{64}")
 
 def sha256(p: Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()
@@ -32,7 +32,7 @@ def resolve_target(raw: object) -> Path:
 def require_string(req: dict, key: str) -> str:
     value = req.get(key)
     if not isinstance(value, str) or not value:
-        raise SystemExit(f"{ky} must be a non-empty string")
+        raise SystemExit(f"{key} must be a non-empty string")
     return value
 
 def main() -> int:
