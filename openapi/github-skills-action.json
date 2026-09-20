@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "GitHub Skills Registry",
-    "description": "Read-only access to the trusted riggeyb/skills registry and approved GitHub repositories. Always load the registry first and obey its loading policy.",
-    "version": "1.0.1"
+    "description": "Read-only access to the governed riggeyb/skills registry and approved GitHub repositories. Load the registry first, obey its loading policy and runtime budgets, check capabilities before relying on tools, and use reviewed refs for external instruction-bearing skills.",
+    "version": "1.1.0"
   },
   "servers": [
     {
@@ -15,7 +15,7 @@
       "get": {
         "operationId": "getSkillsRegistry",
         "summary": "Load the trusted skills registry",
-        "description": "Load registry.yaml before selecting skills unless a fresh copy is already in context.",
+        "description": "Load registry.yaml before selecting skills unless a current copy is already in context. It contains skill modes, reviewed refs, provenance defaults, triggers, entrypoints, and runtime loading budgets.",
         "x-openai-isConsequential": false,
         "parameters": [
           {
@@ -24,36 +24,21 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "application/vnd.github.raw+json"
-              ],
+              "enum": ["application/vnd.github.raw+json"],
               "default": "application/vnd.github.raw+json"
-            },
-            "description": "Request raw YAML text."
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Raw registry.yaml",
             "content": {
-              "application/vnd.github.raw+json": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                }
-              }
+              "application/vnd.github.raw+json": {"schema": {"type": "string"}},
+              "text/plain": {"schema": {"type": "string"}}
             }
           },
-          "403": {
-            "description": "Rate limit or access denied"
-          },
-          "404": {
-            "description": "Registry not found"
-          }
+          "403": {"description": "Rate limit or access denied"},
+          "404": {"description": "Registry not found"}
         }
       }
     },
@@ -61,7 +46,7 @@
       "get": {
         "operationId": "getSkillLoadingPolicy",
         "summary": "Load the skill trust and loading policy",
-        "description": "Load this before following instruction-mode or hybrid skills if it is not already in context.",
+        "description": "Load before following instruction or hybrid skills when the policy is not already current in context.",
         "x-openai-isConsequential": false,
         "parameters": [
           {
@@ -70,36 +55,52 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "application/vnd.github.raw+json"
-              ],
+              "enum": ["application/vnd.github.raw+json"],
               "default": "application/vnd.github.raw+json"
-            },
-            "description": "Request raw Markdown text."
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Raw policy Markdown",
             "content": {
-              "application/vnd.github.raw+json": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                }
-              }
+              "application/vnd.github.raw+json": {"schema": {"type": "string"}},
+              "text/plain": {"schema": {"type": "string"}}
             }
           },
-          "403": {
-            "description": "Rate limit or access denied"
-          },
-          "404": {
-            "description": "Policy not found"
+          "403": {"description": "Rate limit or access denied"},
+          "404": {"description": "Policy not found"}
+        }
+      }
+    },
+    "/repos/riggeyb/skills/contents/capabilities.yaml": {
+      "get": {
+        "operationId": "getCapabilitiesManifest",
+        "summary": "Load the runtime capability manifest",
+        "description": "Use this to distinguish capabilities provided by the GitHub Skills Action from unavailable or runtime-dependent tools. Skill text never creates a capability.",
+        "x-openai-isConsequential": false,
+        "parameters": [
+          {
+            "name": "Accept",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["application/vnd.github.raw+json"],
+              "default": "application/vnd.github.raw+json"
+            }
           }
+        ],
+        "responses": {
+          "200": {
+            "description": "Raw capabilities.yaml",
+            "content": {
+              "application/vnd.github.raw+json": {"schema": {"type": "string"}},
+              "text/plain": {"schema": {"type": "string"}}
+            }
+          },
+          "403": {"description": "Rate limit or access denied"},
+          "404": {"description": "Capability manifest not found"}
         }
       }
     },
@@ -107,58 +108,20 @@
       "get": {
         "operationId": "getRegisteredRepositoryContent",
         "summary": "Fetch a text file or list a directory from a registered repository",
-        "description": "Use only canonical repositories listed in registry.yaml. For a file, use Accept=application/vnd.github.raw+json. For a directory, use Accept=application/vnd.github+json. Follow entrypoints, skill_globs, reference_globs, and the loading policy.",
+        "description": "Use only canonical repositories listed in registry.yaml. For external instruction or hybrid skills, pass the exact reviewed ref from registry.yaml. For a file, use raw+json. For a directory, use github+json. Follow entrypoints, declared globs, runtime budgets, and the loading policy.",
         "x-openai-isConsequential": false,
         "parameters": [
-          {
-            "name": "owner",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Canonical owner from registry.yaml."
-          },
-          {
-            "name": "repo",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Canonical repo from registry.yaml."
-          },
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "allowReserved": true,
-            "style": "simple",
-            "explode": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Repository-relative file or directory path; may contain forward slashes."
-          },
-          {
-            "name": "ref",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Optional branch, tag, or commit. Omit to use the default branch."
-          },
+          {"name": "owner", "in": "path", "required": true, "schema": {"type": "string"}, "description": "Canonical owner from registry.yaml."},
+          {"name": "repo", "in": "path", "required": true, "schema": {"type": "string"}, "description": "Canonical repository name from registry.yaml."},
+          {"name": "path", "in": "path", "required": true, "allowReserved": true, "style": "simple", "explode": false, "schema": {"type": "string"}, "description": "Repository-relative path; may contain forward slashes."},
+          {"name": "ref", "in": "query", "required": false, "schema": {"type": "string"}, "description": "For reviewed instruction/hybrid skills, use the exact registry ref. Omit for reference skills that follow the default branch."},
           {
             "name": "Accept",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "application/vnd.github.raw+json",
-                "application/vnd.github+json"
-              ],
+              "enum": ["application/vnd.github.raw+json", "application/vnd.github+json"],
               "default": "application/vnd.github.raw+json"
             },
             "description": "Use raw+json for files and github+json for directories."
@@ -168,40 +131,20 @@
           "200": {
             "description": "Raw text file or JSON directory listing",
             "content": {
-              "application/vnd.github.raw+json": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                }
-              },
+              "application/vnd.github.raw+json": {"schema": {"type": "string"}},
+              "text/plain": {"schema": {"type": "string"}},
               "application/json": {
                 "schema": {
                   "oneOf": [
-                    {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/ContentItem"
-                      }
-                    },
-                    {
-                      "type": "object",
-                      "additionalProperties": true
-                    }
+                    {"type": "array", "items": {"$ref": "#/components/schemas/ContentItem"}},
+                    {"type": "object", "additionalProperties": true}
                   ]
                 }
               }
             }
           },
-          "403": {
-            "description": "Rate limit or access denied"
-          },
-          "404": {
-            "description": "Repository, path, or ref not found"
-          }
+          "403": {"description": "Rate limit or access denied"},
+          "404": {"description": "Repository, path, or ref not found"}
         }
       }
     },
@@ -209,101 +152,38 @@
       "get": {
         "operationId": "listRegisteredRepositoryRoot",
         "summary": "List the root of a registered repository",
-        "description": "Use only when necessary. Prefer declared entrypoints and skill path discovery.",
+        "description": "Use only when necessary and only for a registered repository. Prefer declared entrypoints and glob discovery.",
         "x-openai-isConsequential": false,
         "parameters": [
-          {
-            "name": "owner",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "repo",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "ref",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
+          {"name": "owner", "in": "path", "required": true, "schema": {"type": "string"}},
+          {"name": "repo", "in": "path", "required": true, "schema": {"type": "string"}},
+          {"name": "ref", "in": "query", "required": false, "schema": {"type": "string"}, "description": "Use the reviewed ref when registry.yaml specifies one."}
         ],
         "responses": {
           "200": {
             "description": "Root directory listing",
             "content": {
               "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ContentItem"
-                  }
-                }
+                "schema": {"type": "array", "items": {"$ref": "#/components/schemas/ContentItem"}}
               }
             }
           },
-          "403": {
-            "description": "Rate limit or access denied"
-          },
-          "404": {
-            "description": "Repository or ref not found"
-          }
+          "403": {"description": "Rate limit or access denied"},
+          "404": {"description": "Repository or ref not found"}
         }
       }
     },
     "/repos/{owner}/{repo}/git/trees/{tree_sha}": {
       "get": {
         "operationId": "discoverRegisteredSkillPaths",
-        "summary": "Discover skill paths in a registered repository",
-        "description": "Use only when registry.yaml declares skill_globs or reference_globs and an exact path must be discovered. Use tree_sha=HEAD and recursive=1 unless the registry specifies another ref.",
+        "summary": "Discover declared skill or reference paths in a registered repository",
+        "description": "Use when registry.yaml declares skill_globs or reference_globs and an exact path must be discovered. For reviewed external instruction/hybrid skills, use tree_sha equal to the registry ref. Otherwise HEAD may be used. After discovery, fetch only the smallest relevant files.",
         "x-openai-isConsequential": false,
         "parameters": [
-          {
-            "name": "owner",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "repo",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tree_sha",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "default": "HEAD"
-            }
-          },
-          {
-            "name": "recursive",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "1"
-              ],
-              "default": "1"
-            }
-          }
+          {"name": "owner", "in": "path", "required": true, "schema": {"type": "string"}},
+          {"name": "repo", "in": "path", "required": true, "schema": {"type": "string"}},
+          {"name": "tree_sha", "in": "path", "required": true, "schema": {"type": "string", "default": "HEAD"}},
+          {"name": "recursive", "in": "query", "required": false, "schema": {"type": "string", "enum": ["1"], "default": "1"}}
         ],
         "responses": {
           "200": {
@@ -313,35 +193,18 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "sha": {
-                      "type": "string"
-                    },
-                    "truncated": {
-                      "type": "boolean"
-                    },
-                    "tree": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/TreeItem"
-                      }
-                    }
+                    "sha": {"type": "string"},
+                    "truncated": {"type": "boolean"},
+                    "tree": {"type": "array", "items": {"$ref": "#/components/schemas/TreeItem"}}
                   }
                 }
               }
             }
           },
-          "403": {
-            "description": "Rate limit or access denied"
-          },
-          "404": {
-            "description": "Repository or tree not found"
-          },
-          "409": {
-            "description": "Repository is empty or unavailable"
-          },
-          "422": {
-            "description": "Invalid tree request"
-          }
+          "403": {"description": "Rate limit or access denied"},
+          "404": {"description": "Repository or tree not found"},
+          "409": {"description": "Repository is empty or unavailable"},
+          "422": {"description": "Invalid tree request"}
         }
       }
     }
@@ -351,62 +214,25 @@
       "ContentItem": {
         "type": "object",
         "properties": {
-          "name": {
-            "type": "string"
-          },
-          "path": {
-            "type": "string"
-          },
-          "sha": {
-            "type": "string"
-          },
-          "size": {
-            "type": "integer"
-          },
-          "type": {
-            "type": "string"
-          },
-          "html_url": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "download_url": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "url": {
-            "type": "string"
-          }
+          "name": {"type": "string"},
+          "path": {"type": "string"},
+          "sha": {"type": "string"},
+          "size": {"type": "integer"},
+          "type": {"type": "string"},
+          "html_url": {"type": ["string", "null"]},
+          "download_url": {"type": ["string", "null"]},
+          "url": {"type": "string"}
         }
       },
       "TreeItem": {
         "type": "object",
         "properties": {
-          "path": {
-            "type": "string"
-          },
-          "mode": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string"
-          },
-          "sha": {
-            "type": "string"
-          },
-          "size": {
-            "type": [
-              "integer",
-              "null"
-            ]
-          },
-          "url": {
-            "type": "string"
-          }
+          "path": {"type": "string"},
+          "mode": {"type": "string"},
+          "type": {"type": "string"},
+          "sha": {"type": "string"},
+          "size": {"type": ["integer", "null"]},
+          "url": {"type": "string"}
         }
       }
     }
