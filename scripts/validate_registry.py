@@ -55,6 +55,39 @@ def github_json(url: str) -> Any:
 def validate_static(registry: dict[str, Any], capabilities: dict[str, Any]) -> list[str]:
     errors: list[str] = []
 
+    # Capability manifest v2 adds structured operations, guarantees, limitations, and policy while
+    # preserving the existing capability mapping. Validate the v2 shell before delegating to the
+    # existing structural checks below.
+    capabilities_version = capabilities.get("version")
+    if capabilities_version == 2:
+        manifest = capabilities.get("manifest")
+        if not isinstance(manifest, dict):
+            errors.append("capabilities.yaml: manifest must be a mapping")
+        statuses = capabilities.get("statuses")
+        if not isinstance(statuses, dict) or not statuses:
+            errors.append("capabilities.yaml: statuses must be a non-empty mapping")
+        cap_map = capabilities.get("capabilities")
+        if isinstance(cap_map, dict):
+            for cap_name, cap in cap_map.items():
+                if not isinstance(cap, dict):
+                    errors.append(f"capabilities.{cap_name}: must be a mapping")
+                    continue
+                status = cap.get("status")
+                if status not in {"available", "unavailable", "runtime_dependent"}:
+                    errors.append(f"capabilities.{cap_name}.status: invalid status {status!r}")
+                mutating = cap.get("mutating")
+                if not isinstance(mutating, bool):
+                    errors.append(f"capabilities.{cap_name}.mutating: must be boolean")
+                operations = cap.get("operations")
+                if operations is not None and (not isinstance(operations, list) or not all(isinstance(x, str) and x for x in operations)):
+                    errors.append(f"capabilities.{cap_name}.operations: must be a list of strings")
+        # The legacy check below still validates that the capability map exists. Normalize only the
+        # already-validated version field so v2 remains backward-compatible with the rest of this validator.
+        capabilities = dict(capabilities)
+        capabilities["version"] = 1
+    elif capabilities_version != 1:
+        errors.append("capabilities.yaml: version must be 1 or 2")
+
     if registry.get("version") != 2:
         errors.append("registry.yaml: version must be 2")
 

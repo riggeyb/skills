@@ -1,15 +1,16 @@
-version: 1
+version: 2
 
 manifest:
   name: custom-gpt-runtime-capabilities
   description: >-
-    Conservative capability inventory for skills loaded through the GitHub Skills
-    Action and the repository Verification Gateway. Skills describe how to work;
-    this file describes what the runtime is actually known to be able to do.
+    Capability inventory for Sentient's configured runtime integrations. Skills describe
+    how to work; this file describes what the runtime is known to be able to observe or
+    mutate. Capability declarations should track demonstrated tool surfaces, not historical
+    integration names or behavior implied only by skill text.
   last_reviewed: "2026-09-20"
 
 statuses:
-  available: The capability is provided by a configured runtime integration.
+  available: The capability is provided by a configured runtime integration and has been exercised successfully.
   unavailable: The capability is not provided by the configured integrations.
   runtime_dependent: Use only if an explicit tool for the capability is present in the current GPT session.
 
@@ -18,16 +19,81 @@ capabilities:
     status: available
     provider: github-skills-action
     mutating: false
+    operations:
+      - read registry.yaml
+      - read policies/skill-loading.md
+      - read capabilities.yaml
     scope:
-      - riggeyb/skills registry and policy files
+      - riggeyb/skills control-plane files
 
   github_repository_read:
     status: available
     provider: github-skills-action
     mutating: false
+    operations:
+      - read repository content at an explicit ref
+      - list repository root
+      - discover registered paths through Git trees
+      - read branch identity
     scope:
-      - repositories explicitly registered in registry.yaml
-      - paths permitted by registry.yaml and policies/skill-loading.md
+      - repositories and paths permitted by the configured GitHub Action and skill-loading policy
+
+  github_repository_write:
+    status: available
+    provider: github-skills-action
+    mutating: true
+    operations:
+      - create branch from an exact commit SHA
+      - create file
+      - replace file with current blob SHA concurrency guard
+      - delete file with current blob SHA concurrency guard
+      - open pull request
+    guarantees:
+      - writes are explicit repository operations
+      - update and delete operations can use optimistic concurrency
+      - branch creation can pin an exact source commit
+    note: >-
+      Availability means the configured Action exposes these primitives. It does not authorize
+      every mutation. Apply repository-engineering policy, preserve exact bytes, and verify writes
+      by rereading the resulting repository state.
+
+  github_pull_request_read:
+    status: available
+    provider: github-skills-action
+    mutating: false
+    operations:
+      - read pull request state and head/base identities
+      - enumerate changed files and patches when GitHub supplies them
+    guarantees:
+      - pull request head SHA can be compared with independently observed commit and workflow evidence
+
+  github_actions_evidence_read:
+    status: available
+    provider: github-skills-action
+    mutating: false
+    operations:
+      - list workflow runs with branch, event, status, and exact head SHA filters
+      - read a workflow run
+      - enumerate workflow jobs
+      - enumerate workflow artifact metadata
+      - read workflow artifact metadata
+    limitations:
+      - artifact ZIP contents are not exposed by this capability
+    guarantees:
+      - workflow and job observations can be bound to an exact head SHA
+      - artifact metadata is evidence about an artifact, not evidence of its uninspected contents
+
+  github_commit_evidence_read:
+    status: available
+    provider: github-skills-action
+    mutating: false
+    operations:
+      - read commit identity and metadata
+      - enumerate commit check runs
+      - read combined legacy commit status
+    guarantees:
+      - checks and legacy statuses remain separate evidence channels
+      - exact commit SHA is the identity boundary for certification claims
 
   github_tree_discovery:
     status: available
@@ -36,6 +102,26 @@ capabilities:
     scope:
       - registered repositories only
       - skill_globs and reference_globs discovery only
+
+  deterministic_repository_edit:
+    status: available
+    provider: repository-edit-request-workflow
+    mutating: true
+    scope:
+      - riggeyb/skills repository
+      - edit operations supported by scripts/apply_repository_edit_request.py
+    requires: 
+      - an exact source Git blob SHA precondition
+      - a deterministic edit request committed to .repository-edits/requests/
+    guarantees:
+      - source identity is checked before mutation
+      - repository-owned workflow applies the requested deterministic transform
+      - workflow validation can reject stale or invalid edits
+      - a successful mutation creates a new commit SHA that must be reread and recertified
+    note: >-
+      This capability composes the GitHub Action's repository write primitives with a repository-owned
+      GitHub Actions workflow. It is narrower than arbitrary local patching and should be preferred for
+      exact structured edits when its supported operations fit the change.
 
   repository_verification:
     status: available
@@ -51,18 +137,8 @@ capabilities:
       - durable evidence artifacts
       - branch-head equality check for certification
     note: >-
-      A verification run may be called certified only when the gateway reports
-      certified=true. A passing workflow on an older SHA is not certification for
-      a newer branch head.
-
-  github_repository_write:
-    status: runtime_dependent
-    provider: github-writer-action
-    mutating: true
-    note: >-
-      When the GitHub Repository Writer Action is configured in the current GPT,
-      it can create branches, create or update files, delete files, and open pull requests.
-      Verify that those writer operations are actually present before relying on them.
+      A verification run may be called certified only when the gateway reports certified=true.
+      A passing workflow on an older SHA is not certification for a newer branch head.
 
   repository_content_transform:
     status: runtime_dependent
@@ -74,14 +150,12 @@ capabilities:
       - exact transformed-content handoff to the repository writer
     guarantees:
       - source bytes do not need to be reconstructed by the model
-      - transformations can enforce explicit preconditions before any remote mutation
+      - transformations can enforce explicit preconditions before remote mutation
       - expected result bytes can be hashed and compared with a post-write reread
     note: >-
-      Repository read, local execution, file access, and repository write capabilities
-      do not independently establish this composition. Treat this capability as present
-      only when the current runtime exposes a concrete transfer path between them. The
-      repository helper scripts/prepare_repository_edit.py can perform deterministic
-      byte-level preparation once exact source content has been materialized locally.
+      Do not infer a general content-transfer path merely because repository read and write tools
+      exist. The deterministic_repository_edit capability above is independently available for its
+      narrower repository-owned request format.
 
   arbitrary_http_requests:
     status: unavailable
@@ -93,8 +167,8 @@ capabilities:
     status: runtime_dependent
     mutating: true
     note: >-
-      Verification profiles may execute shell commands inside isolated GitHub Actions
-      runners, but that does not grant the conversational GPT a general remote shell.
+      Verification profiles may execute shell commands inside isolated GitHub Actions runners, but
+      that does not grant the conversational GPT a general remote shell.
 
   python_execution:
     status: runtime_dependent
@@ -104,8 +178,9 @@ capabilities:
     status: runtime_dependent
     mutating: true
     note: >-
-      A repository verification profile may include Playwright or another browser
-      test suite when the repository installs and configures it.
+      A repository verification profile may include Playwright or another browser test suite when
+      the repository installs and configures it. A separate explicit browser tool may also establish
+      this capability for the current session.
 
   web_search:
     status: runtime_dependent
@@ -125,13 +200,26 @@ capabilities:
 
 policy:
   require_capability_check_before_tool_use: true
-  require_composition_capability_for_exact_repository_mutations: true
   unavailable_behavior: >-
-    Do not claim, simulate, or imply that an unavailable capability was executed.
-    Explain the limitation or use an available alternative.
+    Do not claim, simulate, or imply that an unavailable capability was executed. Explain the
+    limitation or use an available alternative.
   runtime_dependent_behavior: >-
-    Verify that a concrete tool is actually available in the current session before
-    relying on the capability. Skill text alone never creates a capability.
+    Verify that a concrete tool is actually available in the current session before relying on the
+    capability. Skill text alone never creates a capability.
+  available_behavior: >-
+    Availability establishes that the runtime exposes the primitive, not that every use is authorized
+    or that an operation succeeded. Apply task policy, inspect returned evidence, and distinguish
+    capability presence from execution success.
+  read_only_initiative: >-
+    When an available read-only capability can materially reduce uncertainty, prefer using it without
+    stopping for permission unless a higher-priority instruction requires otherwise.
+  mutation_behavior: >-
+    Use available mutation capabilities when authorized by the task and governing policy. Before a
+    consequential write, identify the target identity and preconditions; after the write, treat prior
+    target-bound evidence as stale and verify the resulting state.
+  exact_sha_evidence: >-
+    For GitHub certification, bind pull request, workflow, job, check-run, status, and commit evidence
+    to the same exact SHA. Resolve contradictory observations by identity, freshness, and authority.
   skill_tool_declarations_are_advisory: true
   success_requires_observed_evidence: true
   verification_claim_requires_gateway_certification: true
