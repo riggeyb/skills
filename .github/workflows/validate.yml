@@ -30,6 +30,9 @@ jobs:
       - name: Validate eval definitions
         run: python scripts/check_evals.py
 
+      - name: Validate GPT Actions schema compatibility
+        run: python scripts/validate_actions_schema.py
+
       - name: Validate GitHub repositories and entrypoints
         env:
           GITHUB_TOKEN: ${{ github.token }}
