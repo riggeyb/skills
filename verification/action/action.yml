@@ -1,0 +1,26 @@
+name: Riggeyb Verification Runner
+description: Run a repository-owned .gpt/verification.yaml profile and emit durable evidence.
+inputs:
+  profile:
+    description: Verification profile name to execute.
+    required: false
+    default: full
+  verification-id:
+    description: Unique gateway verification nonce.
+    required: true
+  requested-sha:
+    description: Exact commit SHA requested by the verification gateway.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Install runner dependency
+      shell: bash
+      run: python3 -m pip install --disable-pip-version-check --quiet 'PyYAML>=6,<7'
+    - name: Execute verification profile
+      shell: bash
+      env:
+        VERIFICATION_PROFILE: ${{ inputs.profile }}
+        VERIFICATION_ID: ${{ inputs.verification-id }}
+        VERIFICATION_REQUESTED_SHA: ${{ inputs.requested-sha }}
+      run: python3 "${{ github.action_path }}/runner.py"

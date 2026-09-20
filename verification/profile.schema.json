@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GPT Verification Profile",
+  "type": "object",
+  "required": ["version", "profiles"],
+  "properties": {
+    "version": { "const": 1 },
+    "profiles": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/profile" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "command": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        {
+          "type": "object",
+          "required": ["run"],
+          "properties": {
+            "name": { "type": "string" },
+            "run": { "type": "string", "minLength": 1 },
+            "timeout_seconds": { "type": "integer", "minimum": 1, "maximum": 3600 }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "commands": { "type": "array", "items": { "$ref": "#/$defs/command" } },
+    "profile": {
+      "type": "object",
+      "properties": {
+        "preflight": { "$ref": "#/$defs/commands" },
+        "static": { "$ref": "#/$defs/commands" },
+        "unit": { "$ref": "#/$defs/commands" },
+        "contract": { "$ref": "#/$defs/commands" },
+        "mutation": { "$ref": "#/$defs/commands" },
+        "integration": { "$ref": "#/$defs/commands" },
+        "build": { "$ref": "#/$defs/commands" },
+        "browser": { "$ref": "#/$defs/commands" },
+        "smoke": { "$ref": "#/$defs/commands" },
+        "security": { "$ref": "#/$defs/commands" },
+        "determinism": { "$ref": "#/$defs/commands" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

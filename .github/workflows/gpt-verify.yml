@@ -1,0 +1,49 @@
+name: GPT Verification
+run-name: gpt-verify:${{ github.event.client_payload.verification_id }}
+
+on:
+  repository_dispatch:
+    types: [gpt-verify]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.event.client_payload.sha != '' && github.event.client_payload.verification_id != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact requested SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.client_payload.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prove exact checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.client_payload.sha }}"
+          printf 'REQUESTED_SHA=%s\nCHECKED_OUT_SHA=%s\n' \
+            "${{ github.event.client_payload.sha }}" "$(git rev-parse HEAD)" | tee verification-preflight.txt
+
+      - name: Run repository verification profile
+        id: verify
+        uses: riggeyb/skills/verification/action@2f1aeeec6496081bf4c681407d593cb20311298b
+        with:
+          profile: ${{ github.event.client_payload.profile }}
+          verification-id: ${{ github.event.client_payload.verification_id }}
+          requested-sha: ${{ github.event.client_payload.sha }}
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpt-verification-${{ github.event.client_payload.verification_id }}
+          path: |
+            verification-preflight.txt
+            .verification-evidence/
+          retention-days: 30
+          if-no-files-found: error

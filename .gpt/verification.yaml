@@ -1,0 +1,61 @@
+version: 1
+
+profiles:
+  focused:
+    preflight:
+      - name: registry-static
+        run: python3 scripts/validate_registry.py
+      - name: eval-definitions
+        run: python3 scripts/check_evals.py
+    static:
+      - name: gateway-typecheck
+        run: cd verification-gateway && npm install --no-audit --no-fund && npm run typecheck
+    unit:
+      - name: gateway-tests
+        run: cd verification-gateway && npm test
+
+  full:
+    preflight:
+      - name: registry-static
+        run: python3 scripts/validate_registry.py
+      - name: eval-definitions
+        run: python3 scripts/check_evals.py
+    static:
+      - name: gateway-typecheck
+        run: cd verification-gateway && npm install --no-audit --no-fund && npm run typecheck
+      - name: python-compile
+        run: python3 -m py_compile scripts/validate_registry.py scripts/check_evals.py verification/action/runner.py
+    unit:
+      - name: gateway-tests
+        run: cd verification-gateway && npm test
+    contract:
+      - name: action-schema-json
+        run: python3 -m json.tool openapi/github-skills-action.json >/dev/null
+      - name: verification-schema-yaml
+        run: python3 -c "import yaml; d=yaml.safe_load(open('openapi/verification-gateway-action.yaml')); assert d['openapi'] == '3.1.0'"
+      - name: verification-profile-schema-json
+        run: python3 -m json.tool verification/profile.schema.json >/dev/null
+    mutation:
+      - name: runner-deliberate-failure-proof
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          mkdir -p "$tmp/.gpt"
+          cat > "$tmp/.gpt/verification.yaml" <<'YAML'
+          version: 1
+          profiles:
+            full:
+              mutation:
+                - run: exit 9
+          YAML
+          if (cd "$tmp" && VERIFICATION_PROFILE=full python3 "$OLDPWD/verification/action/runner.py"); then
+            echo 'runner accepted a deliberate failure'
+            exit 1
+          fi
+    security:
+      - name: no-gateway-secrets-in-source
+        run: |
+          set -euo pipefail
+          ! grep -R --line-number --exclude='README.md' --exclude='*.yaml' --exclude='*.yml' \
+            -E 'gh[pousr]_[A-Za-z0-9_]{20,}|VERIFICATION_SIGNING_SECRET=[^<[:space:]]+' \
+            verification-gateway verification

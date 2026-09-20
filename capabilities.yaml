@@ -4,13 +4,13 @@ manifest:
   name: custom-gpt-runtime-capabilities
   description: >-
     Conservative capability inventory for skills loaded through the GitHub Skills
-    Action. Skills describe how to work; this file describes what the runtime is
-    actually known to be able to do.
+    Action and the repository Verification Gateway. Skills describe how to work;
+    this file describes what the runtime is actually known to be able to do.
   last_reviewed: "2026-09-20"
 
 statuses:
-  available: The capability is provided by the configured GitHub Skills Action.
-  unavailable: The capability is not provided by the GitHub Skills Action.
+  available: The capability is provided by a configured runtime integration.
+  unavailable: The capability is not provided by the configured integrations.
   runtime_dependent: Use only if an explicit tool for the capability is present in the current GPT session.
 
 capabilities:
@@ -37,6 +37,24 @@ capabilities:
       - registered repositories only
       - skill_globs and reference_globs discovery only
 
+  repository_verification:
+    status: available
+    provider: verification-gateway
+    mutating: true
+    scope:
+      - repositories explicitly allowlisted by the Verification Gateway
+      - exact commit SHAs containing .gpt/verification.yaml
+    guarantees:
+      - repository-owned verification profiles
+      - exact-SHA checkout
+      - GitHub Actions execution
+      - durable evidence artifacts
+      - branch-head equality check for certification
+    note: >-
+      A verification run may be called certified only when the gateway reports
+      certified=true. A passing workflow on an older SHA is not certification for
+      a newer branch head.
+
   github_repository_write:
     status: unavailable
     provider: github-skills-action
@@ -56,6 +74,9 @@ capabilities:
   shell_execution:
     status: runtime_dependent
     mutating: true
+    note: >-
+      Verification profiles may execute shell commands inside isolated GitHub Actions
+      runners, but that does not grant the conversational GPT a general remote shell.
 
   python_execution:
     status: runtime_dependent
@@ -64,6 +85,9 @@ capabilities:
   browser_automation:
     status: runtime_dependent
     mutating: true
+    note: >-
+      A repository verification profile may include Playwright or another browser
+      test suite when the repository installs and configures it.
 
   web_search:
     status: runtime_dependent
@@ -91,3 +115,4 @@ policy:
     relying on the capability. Skill text alone never creates a capability.
   skill_tool_declarations_are_advisory: true
   success_requires_observed_evidence: true
+  verification_claim_requires_gateway_certification: true
