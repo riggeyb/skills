@@ -183,6 +183,20 @@ skills:
     triggers: [dependency research, API research, library version, SDK, framework upgrade, migration guide, changelog, deprecation, breaking change, compatibility, upstream contract, package upgrade, service API]
 
 
+  - id: implementation-execution
+    title: Implementation Execution
+    repository: riggeyb/skills
+    category: repository-engineering
+    mode: instruction
+    trust: first-party
+    update_policy: reviewed
+    last_reviewed: "2026-09-20"
+    ref: main
+    entrypoints:
+      - skills/implementation-execution/SKILL.md
+    triggers: [implementation execution, implement change, carry to completion, end-to-end implementation, verified implementation, continue implementation, coding workflow, execute plan, finish change, implementation orchestration]
+
+
 
 
 
