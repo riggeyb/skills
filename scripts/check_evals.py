@@ -54,7 +54,7 @@ def main() -> int:
         if not isinstance(rb, list) or not rb or not all(isinstance(x, str) and x for x in rb):
             errors.append(f"{loc}.required_behaviors must be a non-empty list of strings")
 
-        for field in ("expected_skills", "optional_skills", "expected_reference_skills"):
+        for field in ("expected_skills", "optional_skills", "expected_reference_skills", "optional_reference_skills"):
             values = case.get(field, [])
             if not isinstance(values, list):
                 errors.append(f"{loc}.{field} must be a list")
