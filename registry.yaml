@@ -18,12 +18,27 @@ runtime:
   max_instruction_skills: 3
   max_reference_skills: 2
   max_total_skills: 4
+  control_skill_categories: [runtime-control]
+  control_skills_exempt_from_budgets: true
   prefer_entrypoints: true
   progressive_loading: true
   require_capability_check_before_tool_use: true
   load_policy_before_external_instructions: true
 
 skills:
+  - id: instruction-following
+    title: Instruction Following
+    repository: riggeyb/skills
+    category: runtime-control
+    mode: instruction
+    trust: first-party
+    update_policy: reviewed
+    last_reviewed: "2026-09-20"
+    ref: main
+    entrypoints:
+      - skills/instruction-following/SKILL.md
+    triggers: [instructions, constraints, negative constraints, exact format, JSON only, exact count, scope, ordering, strict output, compliance]
+
   - id: tool-use-loop
     title: Tool Use Loop
     repository: riggeyb/skills
@@ -337,6 +352,46 @@ skills:
     mode: reference
     entrypoints: [README.md]
     triggers: [tool learning, ReAct, self correction, execution feedback, CRITIC, CRAFT, tool evaluation]
+
+  - id: awesome-llm-if
+    title: Awesome LLM Instruction Following
+    repository: thinkwee/Awesome-LLM-IF
+    category: instruction-following-research
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [instruction following, constraint following, format following, AutoIF, WizardLM, ComplexBench, controlled generation]
+
+  - id: awesome-instruction-learning
+    title: Awesome Instruction Learning
+    repository: RenzeLou/awesome-instruction-learning
+    category: instruction-learning-research
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [instruction tuning, instruction learning, instruction following, alignment, post training]
+
+  - id: open-instruct
+    title: Open Instruct
+    repository: allenai/open-instruct
+    category: instruction-post-training
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [instruction tuning, supervised fine tuning, DPO, preference tuning, RLVR, post training]
+
+  - id: awesome-instruction-datasets
+    title: Awesome Instruction Datasets
+    repository: jianzhnie/awesome-instruction-datasets
+    category: instruction-data
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [instruction datasets, supervised fine tuning data, instruction response pairs, alignment data]
+
+  - id: instruct-eval
+    title: InstructEval
+    repository: declare-lab/instruct-eval
+    category: instruction-evaluation
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [instruction evaluation, instruction tuned models, benchmark, MMLU, BBH, DROP, HumanEval]
 
 unresolved:
   - requested: Alis-Tech/awesome-agentic-coding
