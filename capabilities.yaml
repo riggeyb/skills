@@ -64,6 +64,25 @@ capabilities:
       it can create branches, create or update files, delete files, and open pull requests.
       Verify that those writer operations are actually present before relying on them.
 
+  repository_content_transform:
+    status: runtime_dependent
+    provider: repository-engineering-runtime
+    mutating: false
+    requires:
+      - exact repository content materialization or an opaque content handle
+      - deterministic local file transformation
+      - exact transformed-content handoff to the repository writer
+    guarantees:
+      - source bytes do not need to be reconstructed by the model
+      - transformations can enforce explicit preconditions before any remote mutation
+      - expected result bytes can be hashed and compared with a post-write reread
+    note: >-
+      Repository read, local execution, file access, and repository write capabilities
+      do not independently establish this composition. Treat this capability as present
+      only when the current runtime exposes a concrete transfer path between them. The
+      repository helper scripts/prepare_repository_edit.py can perform deterministic
+      byte-level preparation once exact source content has been materialized locally.
+
   arbitrary_http_requests:
     status: unavailable
     provider: github-skills-action
@@ -106,6 +125,7 @@ capabilities:
 
 policy:
   require_capability_check_before_tool_use: true
+  require_composition_capability_for_exact_repository_mutations: true
   unavailable_behavior: >-
     Do not claim, simulate, or imply that an unavailable capability was executed.
     Explain the limitation or use an available alternative.

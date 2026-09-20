@@ -85,6 +85,38 @@ cases:
       - avoid unrelated changes
       - do not retry uncertain mutations blindly
 
+  - id: repository-safe-mutation
+    prompt: "Insert one entry into a large repository YAML file and verify the remote result."
+    expected_skills: [repository-engineering, tool-use-loop]
+    optional_skills: [instruction-following]
+    required_behaviors:
+      - capture exact source identity and content before preparing the edit
+      - require repository_content_transform instead of inferring composition from separate tools
+      - prepare the edit deterministically with explicit preconditions
+      - reject zero-match or multi-match anchors
+      - inspect the intended diff before writing
+      - use the captured source version as an optimistic concurrency precondition
+      - independently reread and verify the exact result after the write
+
+  - id: repository-composition-gap
+    prompt: "Read a large GitHub file, edit it with local code, and write it back, but the runtime has no exact content handoff between GitHub and local execution."
+    expected_skills: [repository-engineering, tool-use-loop]
+    required_behaviors:
+      - distinguish interface or composition limitations from underlying GitHub permissions
+      - do not reconstruct a large file body manually through conversational text
+      - do not claim repository_content_transform is available from read plus execution plus write alone
+      - stop before mutation and identify the missing exact-content transfer primitive
+
+  - id: repository-unknown-write-outcome
+    prompt: "A conditional repository write times out and may already have succeeded."
+    expected_skills: [repository-engineering, tool-use-loop]
+    required_behaviors:
+      - classify the state as write outcome unknown rather than immediate failure
+      - do not blindly retry the mutation
+      - reread the destination first
+      - treat an exact expected result as verified success
+      - retry only when the prior write is established absent and the source precondition remains valid
+
   - id: registry-overload
     prompt: "Build a full-stack AI app with RAG, agents, design, evaluation, and deployment."
     optional_skills: [instruction-following, tool-use-loop]
