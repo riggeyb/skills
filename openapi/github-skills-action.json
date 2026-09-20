@@ -3,7 +3,7 @@
   "info": {
     "title": "GitHub Skills Registry",
     "description": "Read-only access to the governed riggeyb/skills registry and approved GitHub repositories. Load the registry first, obey its loading policy and runtime budgets, check capabilities before relying on tools, and use reviewed refs for external instruction-bearing skills.",
-    "version": "1.1.0"
+    "version": "1.1.1"
   },
   "servers": [
     {
@@ -137,7 +137,7 @@
                 "schema": {
                   "oneOf": [
                     {"type": "array", "items": {"$ref": "#/components/schemas/ContentItem"}},
-                    {"type": "object", "additionalProperties": true}
+                    {"$ref": "#/components/schemas/ContentFile"}
                   ]
                 }
               }
@@ -222,6 +222,30 @@
           "html_url": {"type": ["string", "null"]},
           "download_url": {"type": ["string", "null"]},
           "url": {"type": "string"}
+        }
+      },
+      "ContentFile": {
+        "type": "object",
+        "properties": {
+          "type": {"type": "string"},
+          "encoding": {"type": "string"},
+          "size": {"type": "integer"},
+          "name": {"type": "string"},
+          "path": {"type": "string"},
+          "content": {"type": "string"},
+          "sha": {"type": "string"},
+          "url": {"type": "string"},
+          "git_url": {"type": ["string", "null"]},
+          "html_url": {"type": ["string", "null"]},
+          "download_url": {"type": ["string", "null"]},
+          "_links": {
+            "type": "object",
+            "properties": {
+              "self": {"type": "string"},
+              "git": {"type": ["string", "null"]},
+              "html": {"type": ["string", "null"]}
+            }
+          }
         }
       },
       "TreeItem": {
