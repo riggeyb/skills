@@ -12,7 +12,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const result = await createAtomicCommit({
       repository,
       branch: String(req.body?.branch ?? ''),
-      expectedHeadSha: String(req.body?.expected_head_sha ?? ''),
       message: String(req.body?.message ?? ''),
       changes: (req.body?.changes ?? []) as Change[],
     });
