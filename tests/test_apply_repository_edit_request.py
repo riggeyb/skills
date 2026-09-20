@@ -21,7 +21,7 @@ def git_blob_sha(path: Path) -> str:
 def write_request(path: Path, *, target: Path, anchor: str, insertion: str, expected: str | None = None, git_sha: str | None = None) -> None:
     payload = {"version": 1, "operation": "insert-after-unique", "path": str(target.relative_to(ROOT)), "anchor": anchor, "insertion": insertion}
     if git_sha is not None:
-        payload["inserted_source_git_blob_sha"] = git_sha
+        payload["expected_source_git_blob_sha"] = git_sha
     else:
         payload["expected_source_sha256"] = expected or sha256(target)
     path.write_text(json.dumps(payload), encoding="utf-8")
