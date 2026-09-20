@@ -1,6 +1,6 @@
 ---
 name: github-ci-evidence
-description: First-party procedure for exact-SHA GitHub CA inspection, evidence classification, trigger diagnosis, and repair decisions.
+description: First-party procedure for exact-SHA GitHub CI inspection, evidence classification, trigger diagnosis, and repair decisions.
 version: "1.0.0"
 trust: first-party
 ---
@@ -47,14 +47,14 @@ Prefer exact filters such as `head_sha` when available. Once a run ID is known, 
 
 For each required signal classify:
 
-- `PASS` — completed evidence positively satisfies the requirement for the target SHA.
-- `FAIL` — Completed evidence positively violates it.
-- `PENDING` — authoritative evidence exists but is not complete.
-- `ABSENT` — no matching evidence was found where evidence may legitimately not have been created.
-- `STALE` — Evidence belongs to a different SHA or superseded run.
-- `UNKNOWN` — available interfaces cannot establish the state.
+- `PASS` - completed evidence positively satisfies the requirement for the target SHA.
+- `FAIL` - completed evidence positively violates it.
+- `PENDING` - authoritative evidence exists but is not complete.
+- `ABSENT`  - no matching evidence was found where evidence may legitimately not have been created.
+- `STALE`  - evidence belongs to a different SHA or superseded run.
+- `UNKNOWN` - available interfaces cannot establish the state.
 
-`ABSENT` is not automatically `FAIL` . Diagnose whether a run/check should exist before deciding repair is needed.
+`ABSENT` is not automatically `FAIL`. Diagnose whether a run/check should exist before deciding repair is needed.
 
 ## Trigger diagnosis
 
@@ -62,7 +62,7 @@ When expected workflow evidence is absent, investigate trigger semantics before 
 
 Distinguish:
 
- - `push`, `pull_request`, `workflow_dispatch`, schedule, and other events;
+- `push`, `pull_request`, `workflow_dispatch`, schedule, and other events;
 - branch and tag filters;
 - path and path-ignore filters;
 - workflow-file presence on the relevant ref;
@@ -122,7 +122,8 @@ After merge, record the resulting merge/base commit identity when available. Do 
 For pending exact-SHA evidence, follow `reasoning-control` bounded polling. Poll the known run/check rather than broad repository state when possible.
 
 Stop polling when:
-- required evidence converges;
+
+ - required evidence converges;
 - a failure needs diagnosis or repair;
 - the target SHA changes;
 - the expected evidence is proven absent due to trigger semantics;
@@ -131,7 +132,8 @@ Stop polling when:
 ## Reporting
 
 Report exact immutable identities and the furthest supported state. A useful CI report distinguishes:
-- target SHA;
+
+- target SHA;
 - matching evidence found;
 - passing, failing, pending, absent, stale, or unknown signals;
 - diagnosed failure class when supported;
