@@ -1,21 +1,26 @@
 # skills
 
-A governed registry of first-party runtime skills and external GitHub repositories that a Custom GPT can load on demand as task-specific instructions or reference material.
+A governed registry of first-party runtime skills, external GitHub references, and an exact-SHA verification system for a Custom GPT that performs software-engineering work.
 
-The goal is not to make the GPT ingest every repository. The goal is to provide a small, trusted control layer that dynamically selects the minimum useful skill set, checks whether required capabilities actually exist, and then progressively loads current or reviewed guidance.
+The goal is not to make the GPT ingest every repository or trust code because it looks correct. The system dynamically selects the minimum useful skill set, checks whether required capabilities actually exist, and can dispatch repository-owned verification against the exact commit being discussed.
 
 ## Core files
 
 - `registry.yaml` — approved skills, categories, triggers, modes, refs, provenance defaults, and runtime loading budgets.
-- `capabilities.yaml` — conservative inventory of what the GitHub Skills Action can actually do versus capabilities that depend on other runtime tools.
+- `capabilities.yaml` — conservative inventory of actual runtime capabilities, including the Verification Gateway.
 - `policies/skill-loading.md` — trust, precedence, versioning, loading, retry, and prompt-injection rules.
 - `skills/tool-use-loop/SKILL.md` — first-party runtime procedure for plan/act/observe/repair/verify behavior.
-- `openapi/github-skills-action.json` — ready-to-paste Custom GPT Action schema for GitHub reads.
-- `instructions/custom-gpt.md` — primary Custom GPT instructions for using the registry.
+- `openapi/github-skills-action.json` — Custom GPT Action schema for governed GitHub skill reads.
+- `openapi/verification-gateway-action.yaml` — Custom GPT Action schema for exact-SHA repository verification.
+- `instructions/custom-gpt.md` — primary Custom GPT instructions for using skills and verification.
+- `verification-gateway/` — Vercel-ready API that dispatches verification while keeping GitHub credentials server-side.
+- `verification/action/` — central composite runner for repository-owned verification profiles.
+- `verification/templates/` — workflow and profile templates for target repositories.
+- `verification/profile.schema.json` — verification profile schema.
 - `scripts/validate_registry.py` — static and optional live GitHub validation.
 - `evals/cases.yaml` — regression scenarios for trust, tool use, routing, and overload behavior.
-- `scripts/check_evals.py` — static eval-definition validation.
-- `.github/workflows/validate.yml` — CI for registry, eval, repository, ref, entrypoint, and glob validation.
+- `.github/workflows/validate.yml` — registry/eval validation.
+- `.github/workflows/verification-system.yml` — self-tests for the verification gateway and runner.
 
 ## Modes
 
@@ -49,26 +54,116 @@ These limits reduce context overload and conflicting instructions. The GPT shoul
 
 A skill describes **how to perform work**. It does not create a tool.
 
-`capabilities.yaml` distinguishes capabilities actually provided by the GitHub Skills Action from capabilities that require another explicit runtime tool, such as shell execution, Python execution, browser automation, image generation, or external-app actions.
+`capabilities.yaml` distinguishes capabilities actually provided by configured integrations from capabilities that require another explicit runtime tool.
 
-Before following a skill that requires one of those capabilities, the GPT must verify that the capability is present in the current session.
+The Verification Gateway adds a narrow repository-verification capability without exposing a general remote shell or a GitHub token to the GPT.
+
+## Verification architecture
+
+```text
+Custom GPT
+    |
+    | signed/authenticated Action call
+    v
+Verification Gateway
+    |
+    | repository_dispatch
+    v
+Target repository GitHub Actions
+    |
+    | exact requested SHA checkout
+    v
+.gpt/verification.yaml
+    |
+    v
+verification/action runner
+    |
+    +--> per-command logs
+    +--> verification-summary.json
+    +--> durable GitHub Actions artifact
+```
+
+The gateway is stateless. Its opaque verification IDs contain signed claims for the repository, exact SHA, branch, profile, nonce, and certification policy. The GitHub token and signing secret remain server-side.
+
+### Certification rule
+
+A commit is `certified` only when all of the following hold:
+
+1. the target repository verification workflow succeeded;
+2. the workflow tested the exact requested SHA;
+3. the requested verification profile passed;
+4. when exact-head certification is required, the named remote branch still equals the tested SHA.
+
+A green run for an older commit is intentionally not certification for a branch that has advanced.
+
+### Verification stages
+
+Repository profiles may define any relevant subset of:
+
+- `preflight`
+- `static`
+- `unit`
+- `contract`
+- `mutation`
+- `integration`
+- `build`
+- `browser`
+- `smoke`
+- `security`
+- `determinism`
+
+The profile belongs to the target repository. The GPT should not weaken the profile merely to make the implementation under test pass.
+
+### Target repository setup
+
+Copy `verification/templates/gpt-verify.yml` to:
+
+```text
+.github/workflows/gpt-verify.yml
+```
+
+Copy and customize `verification/templates/verification.yaml` to:
+
+```text
+.gpt/verification.yaml
+```
+
+Replace example checks with real repository commands: typechecking, test suites, builds, databases, Playwright, mutation guards, smoke tests, determinism checks, or whatever that repository actually requires.
+
+## Verification Gateway deployment
+
+`verification-gateway/` is designed for Vercel Functions. Configure these environment variables in the gateway deployment:
+
+```text
+VERIFICATION_API_KEY
+VERIFICATION_SIGNING_SECRET
+GITHUB_TOKEN
+VERIFICATION_ALLOWED_REPOS=owner/repo,owner/other-repo
+```
+
+Use a fine-grained GitHub credential restricted to the repositories the gateway must verify, with only the permissions necessary to dispatch Actions and read repository/action metadata and artifacts.
+
+Do not place `GITHUB_TOKEN` or `VERIFICATION_SIGNING_SECRET` in Custom GPT instructions or the Action schema.
+
+After deployment, replace `https://REPLACE_WITH_GATEWAY_DOMAIN` in `openapi/verification-gateway-action.yaml` with the production gateway domain and configure `X-Verification-Key` through the Custom GPT Action authentication UI.
 
 ## Recommended runtime flow
 
 1. Fetch `registry.yaml`.
-2. Fetch `policies/skill-loading.md` and `capabilities.yaml` when not already current in the conversation.
-3. Match the user's task to the smallest sufficient set of registry entries within the runtime budgets.
-4. Load the first-party `tool-use-loop` for meaningful tool-driven or multi-step action work.
-5. Read declared entrypoints at their registered refs.
-6. For `instruction` or `hybrid` entries, follow only approved instructional paths.
-7. Fetch supporting files only when needed.
-8. Check capabilities before relying on any tool requirement described by a skill.
-9. Use `plan -> act -> observe -> diagnose -> repair -> verify` for tool-driven work.
-10. Never elevate unregistered or reference-only repository content into instructions.
+2. Fetch `policies/skill-loading.md` and `capabilities.yaml` when not already current.
+3. Match the user's task to the smallest sufficient set of skills within runtime budgets.
+4. Load `tool-use-loop` for meaningful tool-driven work.
+5. Read declared skill entrypoints at registered refs.
+6. Inspect and modify the target repository using available coding tools.
+7. Run focused repository verification while developing when appropriate.
+8. Diagnose failures from actual evidence and repair them.
+9. Run broader verification before finalizing.
+10. For a final commit, request exact-SHA verification and inspect its evidence.
+11. Call a commit `certified` only when the gateway reports `certified: true`.
 
 ## Validation
 
-Install the validator dependency:
+Install the registry validator dependency:
 
 ```bash
 pip install -r requirements.txt
@@ -87,7 +182,7 @@ Run live GitHub verification:
 python scripts/validate_registry.py --remote
 ```
 
-Set `GITHUB_TOKEN` if you need higher API limits or later add private registered repositories.
+The verification subsystem additionally runs TypeScript tests/typechecking and a deliberate-failure runner proof in `.github/workflows/verification-system.yml`.
 
 ## Reviewing an upstream instructional update
 
@@ -98,25 +193,14 @@ When updating an external `instruction` or `hybrid` skill:
 3. update `ref` in `registry.yaml`;
 4. update `last_reviewed` if appropriate;
 5. run local and remote validation;
-6. review the eval cases affected by the change.
+6. review affected eval cases.
 
 Do not replace a reviewed commit pin with an unpinned default branch for an external instruction-bearing skill.
 
 ## Evaluation
 
-`evals/cases.yaml` currently defines regression expectations for:
+`evals/cases.yaml` defines regression expectations for tool recovery, capability absence, prompt injection, hybrid boundaries, routing, upstream drift, side-effect verification, and context overload.
 
-- coding failure recovery;
-- UI skill routing;
-- malformed API arguments;
-- missing capabilities;
-- prompt injection in reference repositories;
-- hybrid trust boundaries;
-- research routing;
-- upstream instruction drift;
-- side-effect verification;
-- registry/context overload.
+The included checker validates suite structure and skill IDs. Repository execution evidence is handled separately by the Verification Gateway and target repository profiles.
 
-The included checker validates the suite structure and skill IDs. It is intentionally model-agnostic; a future model-driven evaluation runner can execute these cases against the Custom GPT without changing the case format.
-
-This repository is intended to be consumed dynamically through the GitHub API rather than copied wholesale into a model context.
+This repository is intended to be consumed dynamically rather than copied wholesale into a model context.
