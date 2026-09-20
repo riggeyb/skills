@@ -9,14 +9,21 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNNER = ROOT / "scripts" / "apply_repository_edit_request.py"
-
 SENTINEL = ROOT / ".repository-edit-tests"
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
-def write_request(path: Path, *, target: Path, anchor: str, insertion: str, expected: str | None = None) -> None:
-    payload = {"version": 1, "operation": "insert-after-unique", "path": str(target.relative_to(ROOT)), "expected_source_sha256": expected or sha256(target), "anchor": anchor, "insertion": insertion}
+def git_blob_sha(path: Path) -> str:
+    data = path.read_bytes()
+    return hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+
+def write_request(path: Path, *, target: Path, anchor: str, insertion: str, expected: str | None = None, git_sha: str | None = None) -> None:
+    payload = {"version": 1, "operation": "insert-after-unique", "path": str(target.relative_to(ROOT)), "anchor": anchor, "insertion": insertion}
+    if git_sha is not None:
+        payload["inserted_source_git_blob_sha"] = git_sha
+    else:
+        payload["expected_source_sha256"] = expected or sha256(target)
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 def run(request: Path) -> subprocess.CompletedProcess[str]:
@@ -43,6 +50,16 @@ def test_applies_unique_insertion_and_preserves_crlf():
     finally:
         cleanup()
 
+def test_applies_with_git_blob_sha_precondition():
+    target, request = setup(b"anchor\n")
+    try:
+        write_request(request, target=target, anchor="anchor\n", insertion="x\n", git_sha=git_blob_sha(target))
+        result = run(request)
+        assert result.returncode == 0, result.stderr
+        assert target.read_bytes() == b"anchor\nx\n"
+    finally:
+        cleanup()
+
 def test_rejects_stale_source_hash():
     target, request = setup(b"anchor\n")
     try:
@@ -50,6 +67,17 @@ def test_rejects_stale_source_hash():
         result = run(request)
         assert result.returncode != 0
         assert "source hash mismatch" in result.stderr + result.stdout
+        assert target.read_bytes() == b"anchor\n"
+    finally:
+        cleanup()
+
+def test_rejects_stale_git_blob_sha():
+    target, request = setup(b"anchor\n")
+    try:
+        write_request(request, target=target, anchor="anchor\n", insertion="x\n", git_sha="0" * 40)
+        result = run(request)
+        assert result.returncode != 0
+        assert "source Git blob SHA mismatch" in result.stderr + result.stdout
         assert target.read_bytes() == b"anchor\n"
     finally:
         cleanup()
