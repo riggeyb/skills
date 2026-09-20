@@ -1,4 +1,4 @@
-import { assertAllowedRepository, assertBranch, assertPath, assertSha, assertWritableBranch, requireEnv, writerLimits } from './security.js';
+import { assertAllowedRepository, assertBranch, assertPath, assertSha, requireEnv, writerLimits } from './security.js';
 
 type Json = Record<string, any> | any[];
 
@@ -50,7 +50,8 @@ export async function readFile(repository: string, path: string, ref: string): P
 }
 
 export async function createBranch(repository: string, branch: string, fromSha: string): Promise<{ branch: string; sha: string }> {
-  assertWritableBranch(branch);
+  assertAllowedRepository(repository);
+  assertBranch(branch);
   assertSha(fromSha, 'from_sha');
   await github(repository, '/git/refs', {
     method: 'POST',
@@ -66,14 +67,12 @@ export type Change =
 export async function createAtomicCommit(input: {
   repository: string;
   branch: string;
-  expectedHeadSha: string;
   message: string;
   changes: Change[];
 }): Promise<{ branch: string; previous_sha: string; commit_sha: string; tree_sha: string; change_count: number }> {
-  const { repository, branch, expectedHeadSha, message, changes } = input;
+  const { repository, branch, message, changes } = input;
   assertAllowedRepository(repository);
-  assertWritableBranch(branch);
-  assertSha(expectedHeadSha, 'expected_head_sha');
+  assertBranch(branch);
   if (!message.trim() || message.length > 500) throw Object.assign(new Error('Commit message must be 1-500 characters'), { statusCode: 400 });
   const limits = writerLimits();
   if (!Array.isArray(changes) || changes.length < 1 || changes.length > limits.maxChanges) {
@@ -91,12 +90,8 @@ export async function createAtomicCommit(input: {
   if (bytes > limits.maxBytes) throw Object.assign(new Error(`Commit content exceeds ${limits.maxBytes} bytes`), { statusCode: 413 });
 
   const current = await getBranch(repository, branch);
-  const expected = expectedHeadSha.toLowerCase();
-  if (current.sha.toLowerCase() !== expected) {
-    throw Object.assign(new Error(`Branch head moved: expected ${expected}, found ${current.sha}`), { statusCode: 409 });
-  }
-
-  const baseCommit = await github(repository, `/git/commits/${expected}`);
+  const parentSha = current.sha.toLowerCase();
+  const baseCommit = await github(repository, `/git/commits/${parentSha}`);
   const treeEntries: any[] = [];
   for (const change of changes) {
     if (change.action === 'delete') {
@@ -116,18 +111,14 @@ export async function createAtomicCommit(input: {
   });
   const commit = await github(repository, '/git/commits', {
     method: 'POST',
-    body: JSON.stringify({ message: message.trim(), tree: tree.sha, parents: [expected] }),
+    body: JSON.stringify({ message: message.trim(), tree: tree.sha, parents: [parentSha] }),
   });
   await github(repository, `/git/refs/heads/${branch.split('/').map(encodeURIComponent).join('/')}`, {
     method: 'PATCH',
     body: JSON.stringify({ sha: commit.sha, force: false }),
   });
 
-  const after = await getBranch(repository, branch);
-  if (after.sha.toLowerCase() !== String(commit.sha).toLowerCase()) {
-    throw Object.assign(new Error('Branch did not resolve to the created commit after update'), { statusCode: 409 });
-  }
-  return { branch, previous_sha: expected, commit_sha: commit.sha, tree_sha: tree.sha, change_count: changes.length };
+  return { branch, previous_sha: parentSha, commit_sha: commit.sha, tree_sha: tree.sha, change_count: changes.length };
 }
 
 export async function openPullRequest(input: {
