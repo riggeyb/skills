@@ -1,0 +1,36 @@
+name: Validate skills registry
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Validate registry structure
+        run: python scripts/validate_registry.py
+
+      - name: Validate eval definitions
+        run: python scripts/check_evals.py
+
+      - name: Validate GitHub repositories and entrypoints
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/validate_registry.py --remote
