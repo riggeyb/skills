@@ -31,10 +31,11 @@ jobs:
 
       - name: Run repository verification profile
         id: verify
-        uses: riggeyb/skills/verification/action@a9db53dd65970e925721439c1dfdc81d98334455
+        uses: riggeyb/skills/verification/action@ca29ebc68ff44fa46bf4fb116e450312671dca68
         with:
           profile: ${{ github.event.client_payload.profile }}
           verification-id: ${{ github.event.client_payload.verification_id }}
+          requested-sha: ${{ github.event.client_payload.sha }}
 
       - name: Upload verification evidence
         if: always()
