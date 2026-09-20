@@ -11,6 +11,21 @@ SCHEMAS = [ROOT / "openapi" / "github-skills-action.json"]
 MAX_OPERATION_DESCRIPTION = 300
 HTTP_METHODS = {"get", "put", "post", "delete", "patch", "options", "head", "trace"}
 
+# Contract checks for the GitHub mechanics exposed through the existing direct
+# api.github.com Custom Action. Keep these focused on API surface, not workflow
+# policy. Composite text transforms are intentionally not listed here because
+# they require executable handler logic rather than an OpenAPI alias.
+REQUIRED_OPERATIONS = {
+    "createOrUpdateRepositoryFile": True,
+    "getPullRequest": False,
+    "listPullRequestFiles": False,
+    "listWorkflowRuns": False,
+    "getWorkflowRun": False,
+    "listWorkflowRunJobs": False,
+    "listWorkflowRunArtifacts": False,
+    "getWorkflowRunArtifact": False,
+}
+
 
 def walk_schema(node: Any, path: tuple[str, ...], errors: list[str]) -> None:
     if isinstance(node, dict):
@@ -32,11 +47,17 @@ def validate(path: Path) -> list[str]:
     except (OSError, json.JSONDecodeError) as exc:
         return [f"{path}: {exc}"]
 
+    if path.name == "github-skills-action.json":
+        servers = doc.get("servers")
+        if servers != [{"url": "https://api.github.com"}]:
+            errors.append(f"{path}: GitHub Skills Action must remain direct to https://api.github.com")
+
     paths = doc.get("paths")
     if not isinstance(paths, dict):
         return [f"{path}: paths must be an object"]
 
     seen_ids: set[str] = set()
+    consequential: dict[str, bool] = {}
     for route, path_item in paths.items():
         if not isinstance(path_item, dict):
             continue
@@ -50,6 +71,7 @@ def validate(path: Path) -> list[str]:
                 errors.append(f"{route} {method}: duplicate operationId {op_id!r}")
             else:
                 seen_ids.add(op_id)
+                consequential[op_id] = operation.get("x-openai-isConsequential") is True
 
             description = operation.get("description", "")
             if not isinstance(description, str):
@@ -61,6 +83,16 @@ def validate(path: Path) -> list[str]:
 
             responses = operation.get("responses", {})
             walk_schema(responses, (route, method, "responses"), errors)
+
+    if path.name == "github-skills-action.json":
+        for op_id, expected_consequential in REQUIRED_OPERATIONS.items():
+            if op_id not in seen_ids:
+                errors.append(f"{path}: required operation {op_id!r} is missing")
+                continue
+            if consequential.get(op_id) != expected_consequential:
+                errors.append(
+                    f"{path}: operation {op_id!r} consequential flag must be {expected_consequential}"
+                )
 
     return errors
 
