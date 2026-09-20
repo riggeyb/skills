@@ -3,7 +3,7 @@
   "info": {
     "title": "GitHub Skills Registry",
     "description": "Read-only access to the governed riggeyb/skills registry and approved GitHub repositories. Load the registry first, obey its loading policy and runtime budgets, check capabilities before relying on tools, and use reviewed refs for external instruction-bearing skills.",
-    "version": "1.1.1"
+    "version": "1.1.2"
   },
   "servers": [
     {
@@ -108,7 +108,7 @@
       "get": {
         "operationId": "getRegisteredRepositoryContent",
         "summary": "Fetch a text file or list a directory from a registered repository",
-        "description": "Use only canonical repositories listed in registry.yaml. For external instruction or hybrid skills, pass the exact reviewed ref from registry.yaml. For a file, use raw+json. For a directory, use github+json. Follow entrypoints, declared globs, runtime budgets, and the loading policy.",
+        "description": "Use only canonical repositories listed in registry.yaml. For external instruction or hybrid skills, pass the exact reviewed ref from registry.yaml. For files, request raw+json. For directories, GitHub may return a JSON array. Follow entrypoints, declared globs, runtime budgets, and the loading policy.",
         "x-openai-isConsequential": false,
         "parameters": [
           {"name": "owner", "in": "path", "required": true, "schema": {"type": "string"}, "description": "Canonical owner from registry.yaml."},
@@ -135,10 +135,8 @@
               "text/plain": {"schema": {"type": "string"}},
               "application/json": {
                 "schema": {
-                  "oneOf": [
-                    {"type": "array", "items": {"$ref": "#/components/schemas/ContentItem"}},
-                    {"$ref": "#/components/schemas/ContentFile"}
-                  ]
+                  "type": "array",
+                  "items": {"$ref": "#/components/schemas/ContentItem"}
                 }
               }
             }
@@ -219,33 +217,9 @@
           "sha": {"type": "string"},
           "size": {"type": "integer"},
           "type": {"type": "string"},
-          "html_url": {"type": ["string", "null"]},
-          "download_url": {"type": ["string", "null"]},
+          "html_url": {"type": "string"},
+          "download_url": {"type": "string"},
           "url": {"type": "string"}
-        }
-      },
-      "ContentFile": {
-        "type": "object",
-        "properties": {
-          "type": {"type": "string"},
-          "encoding": {"type": "string"},
-          "size": {"type": "integer"},
-          "name": {"type": "string"},
-          "path": {"type": "string"},
-          "content": {"type": "string"},
-          "sha": {"type": "string"},
-          "url": {"type": "string"},
-          "git_url": {"type": ["string", "null"]},
-          "html_url": {"type": ["string", "null"]},
-          "download_url": {"type": ["string", "null"]},
-          "_links": {
-            "type": "object",
-            "properties": {
-              "self": {"type": "string"},
-              "git": {"type": ["string", "null"]},
-              "html": {"type": ["string", "null"]}
-            }
-          }
         }
       },
       "TreeItem": {
@@ -255,7 +229,7 @@
           "mode": {"type": "string"},
           "type": {"type": "string"},
           "sha": {"type": "string"},
-          "size": {"type": ["integer", "null"]},
+          "size": {"type": "integer"},
           "url": {"type": "string"}
         }
       }
