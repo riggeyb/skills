@@ -169,6 +169,20 @@ skills:
       - skills/frontend-verification/SKILL.md
     triggers: [frontend verification, UI verification, browser verification, visual regression, responsive UI, interaction testing, rendered UI, console errors, accessibility verification, viewport testing]
 
+  - id: dependency-api-research
+    title: Dependency and API Research
+    repository: riggeyb/skills
+    category: repository-engineering
+    mode: instruction
+    trust: first-party
+    update_policy: reviewed
+    last_reviewed: "2026-09-20"
+    ref: main
+    entrypoints:
+      - skills/dependency-api-research/SKILL.md
+    triggers: [dependency research, API research, library version, SDK, framework upgrade, migration guide, changelog, deprecation, breaking change, compatibility, upstream contract, package upgrade, service API]
+
+
 
 
 
