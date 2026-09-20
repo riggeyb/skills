@@ -3,7 +3,7 @@
   "info": {
     "title": "GitHub Skills Registry",
     "description": "Read-only access to the governed riggeyb/skills registry and approved GitHub repositories. Load the registry first, obey its loading policy and runtime budgets, check capabilities before relying on tools, and use reviewed refs for external instruction-bearing skills.",
-    "version": "1.1.2"
+    "version": "1.1.3"
   },
   "servers": [
     {
@@ -108,7 +108,7 @@
       "get": {
         "operationId": "getRegisteredRepositoryContent",
         "summary": "Fetch a text file or list a directory from a registered repository",
-        "description": "Use only canonical repositories listed in registry.yaml. For external instruction or hybrid skills, pass the exact reviewed ref from registry.yaml. For files, request raw+json. For directories, GitHub may return a JSON array. Follow entrypoints, declared globs, runtime budgets, and the loading policy.",
+        "description": "Use only repositories in registry.yaml. For external instruction or hybrid skills, pass the reviewed ref. Use raw+json for files and github+json for directories. Follow declared entrypoints and globs, runtime budgets, and the loading policy.",
         "x-openai-isConsequential": false,
         "parameters": [
           {"name": "owner", "in": "path", "required": true, "schema": {"type": "string"}, "description": "Canonical owner from registry.yaml."},
