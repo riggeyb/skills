@@ -117,6 +117,20 @@ skills:
       - skills/test-strategy/SKILL.md
     triggers: [test strategy, testing, regression test, unit test, integration test, end-to-end test, contract test, test failure, verification scope, risk-based testing]
 
+  - id: change-analysis
+    title: Codebase Change Analysis
+    repository: riggeyb/skills
+    category: repository-engineering
+    mode: instruction
+    trust: first-party
+    update_policy: reviewed
+    last_reviewed: "2026-09-20"
+    ref: main
+    entrypoints:
+      - skills/change-analysis/SKILL.md
+    triggers: [implementation planning, codebase analysis, change analysis, impact analysis, trace behavior, call path, dependency analysis, edit plan, affected files, codebase understanding]
+
+
 
 
   - id: repo-agent
