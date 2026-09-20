@@ -30,6 +30,9 @@ jobs:
       - name: Validate eval definitions
         run: python scripts/check_evals.py
 
+      - name: Test deterministic repository edit preparation
+        run: python scripts/test_repository_edit.py
+
       - name: Validate GPT Actions schema compatibility
         run: python scripts/validate_actions_schema.py
 
