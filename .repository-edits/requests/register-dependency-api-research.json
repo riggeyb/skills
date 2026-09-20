@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "operation": "insert-after-unique",
+  "path": "registry.yaml",
+  "expected_source_git_blob_sha": "1fb44886ebda96f7bafe1be95eac956e7ecb55f9",
+  "anchor": "  - id: frontend-verification\n    title: Frontend Verification\n    repository: riggeyb/skills\n    category: repository-engineering\n    mode: instruction\n    trust: first-party\n    update_policy: reviewed\n    last_reviewed: \"2026-09-20\"\n    ref: main\n    entrypoints:\n      - skills/frontend-verification/SKILL.md\n    triggers: [frontend verification, UI verification, browser verification, visual regression, responsive UI, interaction testing, rendered UI, console errors, accessibility verification, viewport testing]\n",
+  "insertion": "\n  - id: dependency-api-research\n    title: Dependency and API Research\n    repository: riggeyb/skills\n    category: repository-engineering\n    mode: instruction\n    trust: first-party\n    update_policy: reviewed\n    last_reviewed: \"2026-09-20\"\n    ref: main\n    entrypoints:\n      - skills/dependency-api-research/SKILL.md\n    triggers: [dependency research, API research, library version, SDK, framework upgrade, migration guide, changelog, deprecation, breaking change, compatibility, upstream contract, package upgrade, service API]\n\n"
+}
