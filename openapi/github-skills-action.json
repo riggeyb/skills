@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "GitHub Skills Registry",
-    "description": "Read-only access to the governed riggeyb/skills registry and approved GitHub repositories. Load the registry first, obey its loading policy and runtime budgets, check capabilities before relying on tools, and use reviewed refs for external instruction-bearing skills.",
-    "version": "1.1.3"
+    "description": "Read trusted skills and registered repositories, and perform selected authenticated GitHub repository writes when the Action is configured with a token.",
+    "version": "1.2.0"
   },
   "servers": [
     {
@@ -15,7 +15,7 @@
       "get": {
         "operationId": "getSkillsRegistry",
         "summary": "Load the trusted skills registry",
-        "description": "Load registry.yaml before selecting skills unless a current copy is already in context. It contains skill modes, reviewed refs, provenance defaults, triggers, entrypoints, and runtime loading budgets.",
+        "description": "Load registry.yaml before selecting skills unless a current copy is already in context. It contains skill modes, reviewed refs, triggers, entrypoints, and runtime budgets.",
         "x-openai-isConsequential": false,
         "parameters": [
           {
@@ -77,7 +77,7 @@
       "get": {
         "operationId": "getCapabilitiesManifest",
         "summary": "Load the runtime capability manifest",
-        "description": "Use this to distinguish capabilities provided by the GitHub Skills Action from unavailable or runtime-dependent tools. Skill text never creates a capability.",
+        "description": "Use this to distinguish capabilities provided by the current runtime from unavailable or runtime-dependent tools. Skill text never creates a capability.",
         "x-openai-isConsequential": false,
         "parameters": [
           {
@@ -108,13 +108,13 @@
       "get": {
         "operationId": "getRegisteredRepositoryContent",
         "summary": "Fetch a text file or list a directory from a registered repository",
-        "description": "Use only repositories in registry.yaml. For external instruction or hybrid skills, pass the reviewed ref. Use raw+json for files and github+json for directories. Follow declared entrypoints and globs, runtime budgets, and the loading policy.",
+        "description": "Use registered repositories for skill/reference reads. For reviewed instruction or hybrid skills, use the registry ref. Use raw+json for files and github+json for directories.",
         "x-openai-isConsequential": false,
         "parameters": [
-          {"name": "owner", "in": "path", "required": true, "schema": {"type": "string"}, "description": "Canonical owner from registry.yaml."},
-          {"name": "repo", "in": "path", "required": true, "schema": {"type": "string"}, "description": "Canonical repository name from registry.yaml."},
-          {"name": "path", "in": "path", "required": true, "allowReserved": true, "style": "simple", "explode": false, "schema": {"type": "string"}, "description": "Repository-relative path; may contain forward slashes."},
-          {"name": "ref", "in": "query", "required": false, "schema": {"type": "string"}, "description": "For reviewed instruction/hybrid skills, use the exact registry ref. Omit for reference skills that follow the default branch."},
+          {"name": "owner", "in": "path", "required": true, "schema": {"type": "string"}},
+          {"name": "repo", "in": "path", "required": true, "schema": {"type": "string"}},
+          {"name": "path", "in": "path", "required": true, "allowReserved": true, "style": "simple", "explode": false, "schema": {"type": "string"}},
+          {"name": "ref", "in": "query", "required": false, "schema": {"type": "string"}},
           {
             "name": "Accept",
             "in": "header",
@@ -123,8 +123,7 @@
               "type": "string",
               "enum": ["application/vnd.github.raw+json", "application/vnd.github+json"],
               "default": "application/vnd.github.raw+json"
-            },
-            "description": "Use raw+json for files and github+json for directories."
+            }
           }
         ],
         "responses": {
@@ -144,6 +143,72 @@
           "403": {"description": "Rate limit or access denied"},
           "404": {"description": "Repository, path, or ref not found"}
         }
+      },
+      "put": {
+        "operationId": "createOrUpdateRepositoryFile",
+        "summary": "Create or update a repository file",
+        "description": "Create a file by omitting sha, or update it by first reading the current file and passing its sha. Prefer a sentient/* working branch and verify the result after writing.",
+        "x-openai-isConsequential": true,
+        "parameters": [
+          {"name": "owner", "in": "path", "required": true, "schema": {"type": "string"}},
+          {"name": "repo", "in": "path", "required": true, "schema": {"type": "string"}},
+          {"name": "path", "in": "path", "required": true, "allowReserved": true, "style": "simple", "explode": false, "schema": {"type": "string"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": {"type": "string"},
+                  "content": {"type": "string", "description": "Base64-encoded file content."},
+                  "sha": {"type": "string", "description": "Current file SHA when updating an existing file."},
+                  "branch": {"type": "string", "description": "Branch to write. Prefer a sentient/* working branch."}
+                },
+                "required": ["message", "content", "branch"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"description": "File updated"},
+          "201": {"description": "File created"},
+          "409": {"description": "Conflict; reread current state before retrying"},
+          "422": {"description": "Invalid request"}
+        }
+      },
+      "delete": {
+        "operationId": "deleteRepositoryFile",
+        "summary": "Delete a repository file",
+        "description": "Delete an existing file using its current sha. Prefer a sentient/* working branch. On conflict, reread current state before attempting another mutation.",
+        "x-openai-isConsequential": true,
+        "parameters": [
+          {"name": "owner", "in": "path", "required": true, "schema": {"type": "string"}},
+          {"name": "repo", "in": "path", "required": true, "schema": {"type": "string"}},
+          {"name": "path", "in": "path", "required": true, "allowReserved": true, "style": "simple", "explode": false, "schema": {"type": "string"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": {"type": "string"},
+                  "sha": {"type": "string", "description": "Current file SHA."},
+                  "branch": {"type": "string", "description": "Branch to write."}
+                },
+                "required": ["message", "sha", "branch"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"description": "File deleted"},
+          "409": {"description": "Conflict; reread current state before retrying"},
+          "422": {"description": "Invalid request"}
+        }
       }
     },
     "/repos/{owner}/{repo}/contents": {
@@ -155,7 +220,7 @@
         "parameters": [
           {"name": "owner", "in": "path", "required": true, "schema": {"type": "string"}},
           {"name": "repo", "in": "path", "required": true, "schema": {"type": "string"}},
-          {"name": "ref", "in": "query", "required": false, "schema": {"type": "string"}, "description": "Use the reviewed ref when registry.yaml specifies one."}
+          {"name": "ref", "in": "query", "required": false, "schema": {"type": "string"}}
         ],
         "responses": {
           "200": {
@@ -175,7 +240,7 @@
       "get": {
         "operationId": "discoverRegisteredSkillPaths",
         "summary": "Discover declared skill or reference paths in a registered repository",
-        "description": "Use when registry.yaml declares skill_globs or reference_globs and an exact path must be discovered. For reviewed external instruction/hybrid skills, use tree_sha equal to the registry ref. Otherwise HEAD may be used. After discovery, fetch only the smallest relevant files.",
+        "description": "Use when registry.yaml declares skill_globs or reference_globs and an exact path must be discovered. After discovery, fetch only the smallest relevant files.",
         "x-openai-isConsequential": false,
         "parameters": [
           {"name": "owner", "in": "path", "required": true, "schema": {"type": "string"}},
@@ -203,6 +268,108 @@
           "404": {"description": "Repository or tree not found"},
           "409": {"description": "Repository is empty or unavailable"},
           "422": {"description": "Invalid tree request"}
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/branches/{branch}": {
+      "get": {
+        "operationId": "getRepositoryBranch",
+        "summary": "Get a repository branch",
+        "description": "Read a branch and its current commit SHA before creating a working branch or verifying a mutation.",
+        "x-openai-isConsequential": false,
+        "parameters": [
+          {"name": "owner", "in": "path", "required": true, "schema": {"type": "string"}},
+          {"name": "repo", "in": "path", "required": true, "schema": {"type": "string"}},
+          {"name": "branch", "in": "path", "required": true, "allowReserved": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Branch state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {"type": "string"},
+                    "protected": {"type": "boolean"},
+                    "commit": {
+                      "type": "object",
+                      "properties": {
+                        "sha": {"type": "string"},
+                        "url": {"type": "string"}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {"description": "Branch not found"}
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/git/refs": {
+      "post": {
+        "operationId": "createRepositoryBranch",
+        "summary": "Create a repository branch",
+        "description": "Create a branch ref from an exact commit SHA. Prefer refs/heads/sentient/* for working branches used for repository changes.",
+        "x-openai-isConsequential": true,
+        "parameters": [
+          {"name": "owner", "in": "path", "required": true, "schema": {"type": "string"}},
+          {"name": "repo", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ref": {"type": "string", "description": "Full ref such as refs/heads/sentient/task-name."},
+                  "sha": {"type": "string", "description": "Exact source commit SHA."}
+                },
+                "required": ["ref", "sha"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {"description": "Branch created"},
+          "422": {"description": "Invalid or existing ref"}
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/pulls": {
+      "post": {
+        "operationId": "createRepositoryPullRequest",
+        "summary": "Create a pull request",
+        "description": "Open a pull request from a working branch into the intended base branch after verifying the resulting repository state.",
+        "x-openai-isConsequential": true,
+        "parameters": [
+          {"name": "owner", "in": "path", "required": true, "schema": {"type": "string"}},
+          {"name": "repo", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {"type": "string"},
+                  "head": {"type": "string"},
+                  "base": {"type": "string"},
+                  "body": {"type": "string"},
+                  "draft": {"type": "boolean"}
+                },
+                "required": ["title", "head", "base"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {"description": "Pull request created"},
+          "422": {"description": "Invalid pull request"}
         }
       }
     }
