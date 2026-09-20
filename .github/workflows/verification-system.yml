@@ -7,12 +7,22 @@ on:
       - 'verification-gateway/**'
       - 'verification/**'
       - 'openapi/verification-gateway-action.yaml'
+      - 'capabilities.yaml'
+      - 'instructions/custom-gpt.md'
+      - 'README.md'
+      - '.gpt/verification.yaml'
+      - '.github/workflows/gpt-verify.yml'
       - '.github/workflows/verification-system.yml'
   pull_request:
     paths:
       - 'verification-gateway/**'
       - 'verification/**'
       - 'openapi/verification-gateway-action.yaml'
+      - 'capabilities.yaml'
+      - 'instructions/custom-gpt.md'
+      - 'README.md'
+      - '.gpt/verification.yaml'
+      - '.github/workflows/gpt-verify.yml'
       - '.github/workflows/verification-system.yml'
 
 permissions:
@@ -105,6 +115,38 @@ jobs:
           assert d['result'] == 'FAIL', d
           assert d['stages'][0]['commands'][0]['exit_code'] == 7, d
           PY
+
+      - name: Prove requested SHA mismatch fails before tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          git -C "$tmp" init -q
+          git -C "$tmp" config user.email self-test@example.com
+          git -C "$tmp" config user.name self-test
+          mkdir -p "$tmp/.gpt"
+          cat > "$tmp/.gpt/verification.yaml" <<'YAML'
+          version: 1
+          profiles:
+            full:
+              preflight:
+                - run: echo should-not-run
+          YAML
+          git -C "$tmp" add .
+          git -C "$tmp" commit -qm init
+          actual="$(git -C "$tmp" rev-parse HEAD)"
+          wrong="0000000000000000000000000000000000000000"
+          test "$actual" != "$wrong"
+          if (
+            cd "$tmp"
+            VERIFICATION_PROFILE=full VERIFICATION_ID=sha-mismatch \
+            VERIFICATION_REQUESTED_SHA="$wrong" \
+              python3 "$GITHUB_WORKSPACE/verification/action/runner.py"
+          ); then
+            echo 'ERROR: verifier accepted the wrong checked-out SHA'
+            exit 1
+          fi
+          test ! -e "$tmp/.verification-evidence/preflight-1.log"
 
       - name: Validate profile schema JSON
         run: python3 -m json.tool verification/profile.schema.json >/dev/null
