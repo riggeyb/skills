@@ -4,7 +4,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import shlex
 import subprocess
 import sys
 import time
@@ -41,6 +40,13 @@ def normalize_commands(value):
     return result
 
 
+def checked_out_sha() -> str | None:
+    try:
+        return subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True, stderr=subprocess.DEVNULL).strip().lower()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+
+
 def main() -> int:
     if not PROFILE_PATH.is_file():
         return fail('.gpt/verification.yaml is missing')
@@ -56,6 +62,11 @@ def main() -> int:
     if not isinstance(profile, dict):
         return fail('selected profile must be a mapping')
 
+    requested_sha = (os.environ.get('VERIFICATION_REQUESTED_SHA') or '').lower() or None
+    actual_sha = checked_out_sha()
+    if requested_sha and actual_sha and requested_sha != actual_sha:
+        return fail(f'checked-out SHA {actual_sha} does not equal requested SHA {requested_sha}')
+
     EVIDENCE.mkdir(exist_ok=True)
     started = datetime.now(timezone.utc).isoformat()
     summary = {
@@ -64,7 +75,9 @@ def main() -> int:
         'profile': requested,
         'profile_sha256': hashlib.sha256(raw).hexdigest(),
         'repository': os.environ.get('GITHUB_REPOSITORY'),
-        'requested_sha': os.environ.get('GITHUB_SHA'),
+        'requested_sha': requested_sha,
+        'checked_out_sha': actual_sha,
+        'exact_checkout_match': bool(requested_sha and actual_sha and requested_sha == actual_sha),
         'runner_started_at': started,
         'result': 'PASS',
         'stages': [],
