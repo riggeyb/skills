@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -17,6 +19,7 @@ from prepare_repository_edit import (
 
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = ROOT / "registry.yaml"
+HELPER = ROOT / "scripts" / "prepare_repository_edit.py"
 
 
 class RepositoryEditTests(unittest.TestCase):
@@ -66,8 +69,8 @@ class RepositoryEditTests(unittest.TestCase):
         with self.assertRaisesRegex(EditPreconditionError, "exact verification failed"):
             verify_exact(b"expected", b"actual")
 
-    def test_cli_contract_can_round_trip_materialized_files(self) -> None:
-        """Model the runtime handoff using local file artifacts."""
+    def test_cli_contract_round_trips_materialized_files(self) -> None:
+        """Exercise the actual CLI handoff and exact reread verification contract."""
         source = b"header\nanchor\ntail\n"
         anchor = b"anchor\n"
         insertion = b"new-entry\n"
@@ -76,16 +79,106 @@ class RepositoryEditTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             source_path = root / "source.bin"
+            anchor_path = root / "anchor.bin"
+            insert_path = root / "insert.bin"
             result_path = root / "result.bin"
+            metadata_path = root / "prepare.json"
             reread_path = root / "reread.bin"
+            verify_metadata_path = root / "verify.json"
+
             source_path.write_bytes(source)
+            anchor_path.write_bytes(anchor)
+            insert_path.write_bytes(insertion)
 
-            prepared = insert_after_unique(source_path.read_bytes(), anchor, insertion)
-            result_path.write_bytes(prepared)
-            reread_path.write_bytes(expected)
-
+            prepared = subprocess.run(
+                [
+                    sys.executable,
+                    str(HELPER),
+                    "insert-after",
+                    "--source",
+                    str(source_path),
+                    "--anchor-file",
+                    str(anchor_path),
+                    "--insert-file",
+                    str(insert_path),
+                    "--output",
+                    str(result_path),
+                    "--expected-source-sha256",
+                    sha256_bytes(source),
+                    "--metadata",
+                    str(metadata_path),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(prepared.returncode, 0, prepared.stderr)
             self.assertEqual(result_path.read_bytes(), expected)
-            verify_exact(result_path.read_bytes(), reread_path.read_bytes())
+
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            self.assertEqual(metadata["anchor_matches"], 1)
+            self.assertEqual(metadata["source_sha256"], sha256_bytes(source))
+            self.assertEqual(metadata["result_sha256"], sha256_bytes(expected))
+
+            reread_path.write_bytes(expected)
+            verified = subprocess.run(
+                [
+                    sys.executable,
+                    str(HELPER),
+                    "verify",
+                    "--expected",
+                    str(result_path),
+                    "--actual",
+                    str(reread_path),
+                    "--metadata",
+                    str(verify_metadata_path),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(verified.returncode, 0, verified.stderr)
+            verify_metadata = json.loads(
+                verify_metadata_path.read_text(encoding="utf-8")
+            )
+            self.assertTrue(verify_metadata["verified"])
+            self.assertEqual(verify_metadata["sha256"], sha256_bytes(expected))
+
+    def test_cli_rejects_stale_source_hash(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_path = root / "source.bin"
+            anchor_path = root / "anchor.bin"
+            insert_path = root / "insert.bin"
+            result_path = root / "result.bin"
+
+            source_path.write_bytes(b"anchor\ntail\n")
+            anchor_path.write_bytes(b"anchor\n")
+            insert_path.write_bytes(b"entry\n")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(HELPER),
+                    "insert-after",
+                    "--source",
+                    str(source_path),
+                    "--anchor-file",
+                    str(anchor_path),
+                    "--insert-file",
+                    str(insert_path),
+                    "--output",
+                    str(result_path),
+                    "--expected-source-sha256",
+                    "0" * 64,
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("source hash precondition failed", result.stderr)
+            self.assertFalse(result_path.exists())
 
 
 if __name__ == "__main__":
