@@ -4,12 +4,6 @@ on:
   push:
     paths:
       - ".repository-edits/requests/*.json"
-  workflow_dispatch:
-    inputs:
-      request:
-        description: "Path to a committed repository edit request"
-        required: true
-        type: string
 
 permissions:
   contents: write
@@ -30,27 +24,18 @@ jobs:
         id: request
         shell: bash
         env:
-          DISPATCH_REQUEST: ${{ inputs.request }}
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
         run: |
           set -euo pipefail
-          if [[ -n "${DISPATCH_REQUEST:-}" ]]; then
-            request="$DISPATCH_REQUEST"
-          else
-            mapfile -t requests < <(
-              git diff --name-only "$BEFORE" "$AFTER" -- '.repository-edits/requests/*.json'
-            )
-            if [[ "${#requests[@]}" -ne 1 ]]; then
-              echo "Expected exactly one changed request; found ${#requests[@]}" >&2
-              exit 2
-            fi
-            request="${requests[0]}"
+          mapfile -t requests < <(
+            git diff --name-only "$BEFORE" "$AFTER" -- '.repository-edits/requests/*.json'
+          )
+          if [[ "${#requests[@]}" -ne 1 ]]; then
+            echo "Expected exactly one changed request; found ${#requests[@]}" >&2
+            exit 2
           fi
-          case "$request" in
-            .repository-edits/requests/*.json) ;;
-            *) echo "Invalid request path: $request" >&2; exit 2 ;;
-          esac
+          request="${requests[0]}"
           [[ -f "$request" ]] || { echo "Request not found: $request" >&2; exit 2; }
           echo "request=$request" >> "$GITHUB_OUTPUT"
 
@@ -62,7 +47,7 @@ jobs:
           python scripts/validate_registry.py
           python scripts/check_evals.py
 
-      - name: Inspect and commit only intended paths
+      - name: Inspect and commit only intended target
         shell: bash
         env:
           REQUEST: ${{ steps.request.outputs.request }}
@@ -87,4 +72,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- "$target"
           git commit -m "Apply repository edit request"
-          git push origin "HEAD
+          git push origin "HEAD:${GITHUB_REF_NAME}"
