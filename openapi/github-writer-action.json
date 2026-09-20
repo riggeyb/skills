@@ -1,0 +1,79 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "GitHub Repository Writer",
+    "description": "Authenticated GitHub write operations for repositories the configured GitHub token can access.",
+    "version": "1.0.0"
+  },
+  "servers": [{"url": "https://api.github.com"}],
+  "paths": {
+    "/repos/{owner}/{repo}/git/refs": {
+      "post": {
+        "operationId": "createRepositoryBranch",
+        "summary": "Create a branch",
+        "description": "Create a Git branch ref from a commit SHA.",
+        "x-openai-isConsequential": true,
+        "parameters": [
+          {"name":"owner","in":"path","required":true,"schema":{"type":"string"}},
+          {"name":"repo","in":"path","required":true,"schema":{"type":"string"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {"application/json":{"schema":{"type":"object","properties":{"ref":{"type":"string"},"sha":{"type":"string"}},"required":["ref","sha"]}}}
+        },
+        "responses": {"201":{"description":"Branch created"},"422":{"description":"Invalid or existing ref"}}
+      }
+    },
+    "/repos/{owner}/{repo}/contents/{path}": {
+      "put": {
+        "operationId": "createOrUpdateRepositoryFile",
+        "summary": "Create or update a file",
+        "description": "Create or replace one repository file and commit the change. Include sha when updating an existing file.",
+        "x-openai-isConsequential": true,
+        "parameters": [
+          {"name":"owner","in":"path","required":true,"schema":{"type":"string"}},
+          {"name":"repo","in":"path","required":true,"schema":{"type":"string"}},
+          {"name":"path","in":"path","required":true,"allowReserved":true,"schema":{"type":"string"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {"application/json":{"schema":{"type":"object","properties":{"message":{"type":"string"},"content":{"type":"string","description":"Base64-encoded file content."},"sha":{"type":"string"},"branch":{"type":"string"}},"required":["message","content"]}}}
+        },
+        "responses": {"200":{"description":"File updated"},"201":{"description":"File created"},"409":{"description":"Conflict"},"422":{"description":"Invalid request"}}
+      },
+      "delete": {
+        "operationId": "deleteRepositoryFile",
+        "summary": "Delete a file",
+        "description": "Delete one repository file and commit the deletion.",
+        "x-openai-isConsequential": true,
+        "parameters": [
+          {"name":"owner","in":"path","required":true,"schema":{"type":"string"}},
+          {"name":"repo","in":"path","required":true,"schema":{"type":"string"}},
+          {"name":"path","in":"path","required":true,"allowReserved":true,"schema":{"type":"string"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {"application/json":{"schema":{"type":"object","properties":{"message":{"type":"string"},"sha":{"type":"string"},"branch":{"type":"string"}},"required":["message","sha"]}}}
+        },
+        "responses": {"200":{"description":"File deleted"},"409":{"description":"Conflict"},"422":{"description":"Invalid request"}}
+      }
+    },
+    "/repos/{owner}/{repo}/pulls": {
+      "post": {
+        "operationId": "createRepositoryPullRequest",
+        "summary": "Open a pull request",
+        "description": "Open a pull request from one branch into another.",
+        "x-openai-isConsequential": true,
+        "parameters": [
+          {"name":"owner","in":"path","required":true,"schema":{"type":"string"}},
+          {"name":"repo","in":"path","required":true,"schema":{"type":"string"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {"application/json":{"schema":{"type":"object","properties":{"title":{"type":"string"},"head":{"type":"string"},"base":{"type":"string"},"body":{"type":"string"},"draft":{"type":"boolean"}},"required":["title","head","base"]}}}
+        },
+        "responses": {"201":{"description":"Pull request created"},"422":{"description":"Invalid pull request"}}
+      }
+    }
+  }
+}
