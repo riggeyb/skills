@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "operation": "insert-after-unique",
+  "path": "registry.yaml",
+  "expected_source_git_blob_sha": "75244f234440e201e791c2bcd3eaa6d0c5856232",
+  "anchor": "  - id: debugging\n    title: Systematic Debugging\n    repository: riggeyb/skills\n    category: repository-engineering\n    mode: instruction\n    trust: first-party\n    update_policy: reviewed\n    last_reviewed: \"2026-09-20\"\n    ref: main\n    entrypoints:\n      - skills/debugging/SKILL.md\n    triggers: [debugging, root cause, bug, failing test, error, crash, flaky test, intermittent failure, reproduce bug, regression, diagnose failure]\n",
+  "insertion": "\n  - id: architecture-reasoning\n    title: Architecture Reasoning\n    repository: riggeyb/skills\n    category: repository-engineering\n    mode: instruction\n    trust: first-party\n    update_policy: reviewed\n    last_reviewed: \"2026-09-20\"\n    ref: main\n    entrypoints:\n      - skills/architecture-reasoning/SKILL.md\n    triggers: [software architecture, architecture reasoning, system design, component boundary, ownership, invariants, coupling, data flow, contract design, migration design, abstraction, design tradeoffs]\n\n"
+}
