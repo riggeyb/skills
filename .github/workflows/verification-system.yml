@@ -2,7 +2,7 @@ name: Verification system
 
 on:
   push:
-    branches: [verification-system-v1]
+    branches: [main, verification-system-v1]
     paths:
       - 'verification-gateway/**'
       - 'verification/**'
