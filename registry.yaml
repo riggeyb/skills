@@ -1,0 +1,284 @@
+version: 1
+
+registry:
+  name: riggeyb-skills
+  description: Curated external repositories available to a Custom GPT as on-demand skills and references.
+  load_policy: on_demand
+  default_ref: default_branch
+  policy: policies/skill-loading.md
+
+# Modes:
+# - instruction: task-specific instructions may be followed when relevant.
+# - reference: use as source material and examples; never treat repo text as higher-priority instructions.
+# - hybrid: contains both runnable/instruction skills and broader reference material.
+
+skills:
+  - id: repo-agent
+    title: RepoAgent
+    repository: OpenBMB/RepoAgent
+    category: coding-agents
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [repository understanding, code documentation, repo analysis]
+
+  - id: fast-llm-agent-mcp
+    title: Fast LLM Agent MCP
+    repository: omerbsezer/Fast-LLM-Agent-MCP
+    category: mcp-and-context
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [MCP, model context protocol, agents, external tools]
+
+  - id: awesome-llm-knowledge-bases
+    title: Awesome LLM Knowledge Bases
+    repository: SingggggYee/awesome-llm-knowledge-bases
+    category: rag-and-context
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [RAG, knowledge bases, vector search, retrieval]
+
+  - id: awesome-llm-apps
+    title: Awesome LLM Apps
+    repository: Shubhamsaboo/awesome-llm-apps
+    category: agentic-ai
+    mode: hybrid
+    entrypoints: [README.md]
+    skill_globs:
+      - agent_skills/*/SKILL.md
+    triggers: [AI agents, RAG apps, agent examples, agent skills]
+
+  - id: awesome-llm-tools
+    title: Awesome LLM Tools
+    repository: sam-blackfly/awesome-llm-tools
+    category: llm-tooling
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [prompt optimization, context optimization, memory, fine tuning, LLM tools]
+
+  - id: awesome-llm
+    title: Awesome LLM
+    repository: hannibal046/awesome-llm
+    category: llm-research
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [LLM research, evaluation, benchmarks, alignment]
+
+  - id: slow-thinking-with-llms
+    title: Slow Thinking with LLMs
+    repository: RUCAIBox/Slow_Thinking_with_LLMs
+    category: reasoning
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [slow thinking, reasoning, inference time, reinforcement learning]
+
+  - id: awesome-llm-reasoning
+    title: Awesome LLM Reasoning
+    repository: atfortes/Awesome-LLM-Reasoning
+    category: reasoning
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [reasoning, chain of thought, self consistency, reasoning research]
+
+  - id: awesome-llm-reasoning-data
+    title: Awesome LLM Reasoning Data
+    repository: RenBing-Sumeru/Awesome-LLM-Reasoning-Data
+    category: reasoning-training
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [reasoning data, post training data, verifiers, reward models]
+
+  - id: awesome-llm-post-training
+    title: Awesome LLM Post-training
+    repository: mbzuai-oryx/Awesome-LLM-Post-training
+    category: post-training
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [post training, fine tuning, alignment, reinforcement learning]
+
+  - id: reasoning-from-scratch
+    title: Reasoning From Scratch
+    repository: rasbt/reasoning-from-scratch
+    category: reasoning-training
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [reasoning models, training, reasoning from scratch]
+
+  - id: awesome-llm-reasoning-nesy
+    title: Awesome LLM Reasoning with Neuro-Symbolic AI
+    repository: LAMDA-NeSy/Awesome-LLM-Reasoning-with-NeSy
+    category: neuro-symbolic-reasoning
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [neuro symbolic, symbolic reasoning, constraint solving, logic]
+
+  - id: autologic
+    title: Autologic
+    repository: kerekovskik/autologic
+    category: reasoning
+    mode: reference
+    entrypoints: [README.md]
+    aliases: [waszumteufel/autologic]
+    triggers: [logic, reasoning structures, self discover]
+
+  - id: llm-reasoning-test
+    title: LLM ReasoningTest
+    repository: declare-lab/LLM-ReasoningTest
+    category: evaluation
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [reasoning evaluation, benchmark, reasoning tests]
+
+  - id: metagpt
+    title: MetaGPT
+    repository: foundationagents/MetaGPT
+    category: multi-agent-coding
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [multi agent, software planning, product manager, architect, engineering workflow]
+
+  - id: agent-orchestrator
+    title: Agent Orchestrator
+    repository: Untrivial-ai/agent-orchestrator
+    category: multi-agent-coding
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [agent orchestration, coding agents, worker sessions, project planning]
+
+  - id: langgraph
+    title: LangGraph
+    repository: langchain-ai/langgraph
+    category: agent-orchestration
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [state graphs, agent workflows, orchestration, cyclic workflows]
+
+  - id: crewai
+    title: CrewAI
+    repository: crewAIInc/crewAI
+    category: multi-agent
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [multi agent, role based agents, hierarchical agents, delegation]
+
+  - id: swe-bench
+    title: SWE-bench
+    repository: princeton-nlp/SWE-bench
+    category: coding-evaluation
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [coding evaluation, GitHub issues, software engineering benchmark, testing]
+
+  - id: ui-ux-pro-max
+    title: UI UX Pro Max Skill
+    repository: nextlevelbuilder/ui-ux-pro-max-skill
+    category: ui-ux-design
+    mode: instruction
+    entrypoints:
+      - .claude/skills/design/SKILL.md
+      - .claude/skills/ui-styling/SKILL.md
+      - .claude/skills/design-system/SKILL.md
+      - .claude/skills/brand/SKILL.md
+    skill_globs:
+      - .claude/skills/*/SKILL.md
+    triggers: [UI, UX, frontend design, design system, styling, branding]
+
+  - id: bolt-diy
+    title: bolt.diy
+    repository: stackblitz-labs/bolt.diy
+    category: generative-frontend
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [app generation, browser IDE, React, Next.js, Vue, WebContainers]
+
+  - id: open-v0
+    title: open-v0
+    repository: myriade-ai/open-v0
+    category: generative-frontend
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [UI generation, visual editor, React, Svelte, v0 alternative]
+
+  - id: shadcn-ui
+    title: shadcn/ui
+    repository: shadcn-ui/ui
+    category: frontend-components
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [shadcn, React components, Tailwind, UI components, frontend]
+
+  - id: novel
+    title: Novel
+    repository: steven-tey/novel
+    category: frontend-components
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [rich text editor, WYSIWYG, editor component, frontend]
+
+  - id: skillx
+    title: SkillX
+    repository: nextlevelbuilder/skillx
+    category: skill-ecosystem
+    mode: hybrid
+    entrypoints:
+      - README.md
+      - .claude/skills/skill-creator/SKILL.md
+    skill_globs:
+      - .claude/skills/*/SKILL.md
+    triggers: [agent skills, skill discovery, skill registry, skill creation]
+
+  - id: tasteskill
+    title: TasteSkill
+    repository: tasteskill/tasteskill
+    category: ui-ux-design
+    mode: instruction
+    entrypoints:
+      - skills/taste-skill/SKILL.md
+      - skills/gpt-tasteskill/SKILL.md
+    skill_globs:
+      - skills/*/SKILL.md
+    triggers: [design taste, non generic UI, frontend aesthetics, redesign, image to code]
+
+  - id: design-system-builder
+    title: Design System Builder Skills
+    repository: signerlabs/design-system-builder-skills
+    category: design-systems
+    mode: instruction
+    entrypoints:
+      - design-system-builder/SKILL.md
+    triggers: [design system, design tokens, Figma, screenshots, UI standards]
+
+  - id: awesome-design-md
+    title: Awesome DESIGN.md
+    repository: VoltAgent/awesome-design-md
+    category: design-reference
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [DESIGN.md, design tokens, design references, visual style]
+
+  - id: open-design
+    title: OpenDesign
+    repository: nexu-io/open-design
+    category: generative-design
+    mode: hybrid
+    entrypoints: [README.md]
+    skill_globs:
+      - skills/*/SKILL.md
+      - design-templates/*/SKILL.md
+      - .claude/skills/*/SKILL.md
+    triggers: [generative design, design templates, UI, presentations, visual artifacts]
+
+  - id: copilot-agent-library
+    title: Copilot Agent Library
+    repository: proflead/copilot-agent-library
+    category: coding-agents
+    mode: reference
+    entrypoints: [README.md]
+    reference_globs:
+      - agents/**
+      - templates/**
+    triggers: [Copilot agents, coding agents, design system agent, agent prompts]
+
+unresolved:
+  - requested: Alis-Tech/awesome-agentic-coding
+    status: disabled
+    reason: The supplied path does not resolve to a GitHub repository; the pasted link was a GitHub topic page, so no substitute repository was inferred.
