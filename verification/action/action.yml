@@ -8,6 +8,9 @@ inputs:
   verification-id:
     description: Unique gateway verification nonce.
     required: true
+  requested-sha:
+    description: Exact commit SHA requested by the verification gateway.
+    required: true
 runs:
   using: composite
   steps:
@@ -19,4 +22,5 @@ runs:
       env:
         VERIFICATION_PROFILE: ${{ inputs.profile }}
         VERIFICATION_ID: ${{ inputs.verification-id }}
+        VERIFICATION_REQUESTED_SHA: ${{ inputs.requested-sha }}
       run: python3 "${{ github.action_path }}/runner.py"
