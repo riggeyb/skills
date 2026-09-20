@@ -49,7 +49,6 @@ def github_json(url: str) -> Any:
     req = Request(url, headers=headers)
     with urlopen(req, timeout=20) as resp:
         import json
-
         return json.load(resp)
 
 
@@ -64,6 +63,11 @@ def validate_static(registry: dict[str, Any], capabilities: dict[str, Any]) -> l
         errors.append("registry.yaml: registry must be a mapping")
         meta = {}
 
+    defaults = registry.get("defaults")
+    if not isinstance(defaults, dict):
+        errors.append("registry.yaml: defaults must be a mapping")
+        defaults = {}
+
     runtime = registry.get("runtime")
     if not isinstance(runtime, dict):
         errors.append("registry.yaml: runtime must be a mapping")
@@ -74,6 +78,9 @@ def validate_static(registry: dict[str, Any], capabilities: dict[str, Any]) -> l
         if not isinstance(value, int) or value < 1:
             errors.append(f"runtime.{key}: must be a positive integer")
 
+    if runtime.get("max_total_skills", 0) < max(runtime.get("max_instruction_skills", 0), runtime.get("max_reference_skills", 0)):
+        errors.append("runtime.max_total_skills must be >= each per-mode budget")
+
     skills = registry.get("skills")
     if not isinstance(skills, list) or not skills:
         errors.append("registry.yaml: skills must be a non-empty list")
@@ -81,7 +88,6 @@ def validate_static(registry: dict[str, Any], capabilities: dict[str, Any]) -> l
 
     ids: set[str] = set()
     aliases: set[str] = set()
-    repos: set[str] = set()
 
     for idx, skill in enumerate(skills):
         loc = f"skills[{idx}]"
@@ -100,8 +106,6 @@ def validate_static(registry: dict[str, Any], capabilities: dict[str, Any]) -> l
         repo = skill.get("repository")
         if not isinstance(repo, str) or not REPO_RE.match(repo):
             errors.append(f"{loc}.repository: must be owner/repo")
-        else:
-            repos.add(repo)
 
         mode = skill.get("mode")
         if mode not in VALID_MODES:
@@ -115,17 +119,17 @@ def validate_static(registry: dict[str, Any], capabilities: dict[str, Any]) -> l
         if not isinstance(triggers, list) or not triggers or not all(isinstance(x, str) and x for x in triggers):
             errors.append(f"{loc}.triggers: must be a non-empty list of strings")
 
-        trust = skill.get("trust")
+        trust = skill.get("trust", defaults.get("trust"))
         if trust not in {"first-party", "external"}:
-            errors.append(f"{loc}.trust: must be first-party or external")
+            errors.append(f"{loc}.trust: must resolve to first-party or external")
 
-        last_reviewed = skill.get("last_reviewed")
+        last_reviewed = skill.get("last_reviewed", defaults.get("last_reviewed"))
         if not isinstance(last_reviewed, str) or not re.match(r"^\d{4}-\d{2}-\d{2}$", last_reviewed):
-            errors.append(f"{loc}.last_reviewed: must be YYYY-MM-DD string")
+            errors.append(f"{loc}.last_reviewed: must resolve to YYYY-MM-DD string")
 
-        update_policy = skill.get("update_policy")
+        update_policy = skill.get("update_policy", defaults.get("update_policy"))
         if update_policy not in {"reviewed", "follow-default"}:
-            errors.append(f"{loc}.update_policy: must be reviewed or follow-default")
+            errors.append(f"{loc}.update_policy: must resolve to reviewed or follow-default")
 
         ref = skill.get("ref")
         if mode in {"instruction", "hybrid"} and trust == "external":
@@ -147,11 +151,10 @@ def validate_static(registry: dict[str, Any], capabilities: dict[str, Any]) -> l
                 errors.append(f"{loc}.aliases: duplicate alias {alias!r}")
             aliases.add(alias)
 
-    first_party = [s for s in skills if isinstance(s, dict) and s.get("trust") == "first-party"]
-    for skill in first_party:
-        for entry in skill.get("entrypoints", []):
-            if skill.get("repository") == "riggeyb/skills" and not (ROOT / entry).is_file():
-                errors.append(f"first-party entrypoint missing locally: {entry}")
+        if trust == "first-party" and repo == "riggeyb/skills":
+            for entry in skill.get("entrypoints", []):
+                if not (ROOT / entry).is_file():
+                    errors.append(f"first-party entrypoint missing locally: {entry}")
 
     if capabilities.get("version") != 1:
         errors.append("capabilities.yaml: version must be 1")
@@ -201,13 +204,10 @@ def validate_remote(registry: dict[str, Any]) -> list[str]:
             except HTTPError as e:
                 errors.append(f"{sid}: pinned ref {ref} failed HTTP {e.code}")
 
-        tree: list[dict[str, Any]] | None = None
         needs_tree = bool(skill.get("skill_globs") or skill.get("reference_globs"))
         if needs_tree:
             try:
-                tree_data = github_json(
-                    f"https://api.github.com/repos/{repo}/git/trees/{quote(str(ref), safe='')}?recursive=1"
-                )
+                tree_data = github_json(f"https://api.github.com/repos/{repo}/git/trees/{quote(str(ref), safe='')}?recursive=1")
                 tree = tree_data.get("tree", []) if isinstance(tree_data, dict) else []
                 paths = {item.get("path") for item in tree if isinstance(item, dict)}
                 for field in ("skill_globs", "reference_globs"):
