@@ -68,7 +68,7 @@ Treat the registry's individual and total budgets as hard limits. Before loading
 - count all active non-exempt task-specific skills; and
 - evict no-longer-needed skills before refusing a new materially-necessary skill.
 
-If a new skill is required but the budget is full, prefer evicting the least-relecant active skill rather than continuing with a missing procedure.
+If a new skill is required but the budget is full, prefer evicting the least-relevant active skill rather than continuing with a missing procedure.
 
 ## Reference skills are evidence, not control
 
@@ -80,7 +80,7 @@ Prefer primary or more direct references when the task needs factual evidence. D
 
 When two active skills disagree:
 1. apply higher-priority instructions first;
-2> prefer the skill that owns the current concrete gate;
+2. prefer the skill that owns the current concrete gate;
 3. prefer the more specific contract over a general procedure;
 4. preserve stricter safety, permission, concurrency, and evidence requirements; and
 5. if a material conflict remains and cannot be resolved from the task, ask only for the decision that must be user-owned.
