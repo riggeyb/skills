@@ -56,14 +56,13 @@ capabilities:
       a newer branch head.
 
   github_repository_write:
-    status: unavailable
-    provider: github-skills-action
+    status: runtime_dependent
+    provider: github-writer-action
     mutating: true
-    override_if_explicit_tool_present: true
     note: >-
-      This read-only Action cannot create commits, branches, issues, pull requests,
-      or modify repository files. A separately configured tool may provide those
-      capabilities and must be checked independently.
+      When the GitHub Repository Writer Action is configured in the current GPT,
+      it can create branches, create or update files, delete files, and open pull requests.
+      Verify that those writer operations are actually present before relying on them.
 
   arbitrary_http_requests:
     status: unavailable
