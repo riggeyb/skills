@@ -25,6 +25,8 @@ export type VerificationStatus = {
   repository: string;
   requestedSha: string;
   testedSha: string | null;
+  workflowEventSha: string | null;
+  exactCheckoutProven: boolean;
   branch: string | null;
   profile: string;
   state: 'dispatched' | 'queued' | 'running' | 'passed' | 'failed';
