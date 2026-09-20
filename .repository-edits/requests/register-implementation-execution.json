@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "operation": "insert-before-unique",
+  "path": "registry.yaml",
+  "expected_source_git_blob_sha": "845a65a35a922046569e5ae07b66ae1189970d58",
+  "anchor": "  - id: repo-agent\n",
+  "insertion": "  - id: implementation-execution\n    title: Implementation Execution\n    repository: riggeyb/skills\n    category: repository-engineering\n    mode: instruction\n    trust: first-party\n    update_policy: reviewed\n    last_reviewed: \"2026-09-20\"\n    ref: main\n    entrypoints:\n      - skills/implementation-execution/SKILL.md\n    triggers: [implementation execution, implement change, carry to completion, end-to-end implementation, verified implementation, continue implementation, coding workflow, execute plan, finish change, implementation orchestration]\n\n"
+}
