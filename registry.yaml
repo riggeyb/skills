@@ -278,6 +278,30 @@ skills:
       - templates/**
     triggers: [Copilot agents, coding agents, design system agent, agent prompts]
 
+  - id: toolbench
+    title: ToolBench / ToolLLM
+    repository: OpenBMB/ToolBench
+    category: tool-learning
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [tool use, API calling, execution feedback, tool selection, tool evaluation, API retrieval]
+
+  - id: xagent
+    title: XAgent
+    repository: OpenBMB/XAgent
+    category: agent-execution
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [autonomous agents, planning, tool execution, execution feedback, Docker tools, planner actor, error recovery]
+
+  - id: awesome-llm-tool-learning
+    title: Awesome LLM Tool Learning
+    repository: AngxiaoYue/awesome-llm-tool-learning
+    category: tool-learning-research
+    mode: reference
+    entrypoints: [README.md]
+    triggers: [tool learning, ReAct, self correction, execution feedback, CRITIC, CRAFT, tool evaluation]
+
 unresolved:
   - requested: Alis-Tech/awesome-agentic-coding
     status: disabled
