@@ -13,6 +13,24 @@ Use this runtime control when a task could match multiple skills, when an orches
 
 Select the smallest sufficient set of trusted skills for the current material gate, keep the task's overall objective outside any one specialist, hand responsibility back when the specialist's gate is resolved, and evict skills that no longer justify their runtime cost.
 
+## Automatic capability discovery
+
+Before recommending a manual workflow, external builder, user-operated workaround, or a plan that assumes the runtime cannot act, determine whether available runtime capabilities would materially change the best approach.
+
+Treat capability discovery as a gate when the task is open-ended, consequential, multi-step, implementation-oriented, or likely to benefit from repository access, external evidence, artifact generation, verification, or mutation. Do not require the user to ask what tools or skills are available first.
+
+At this gate:
+1. inspect the capability manifest and current runtime tool surface;
+2. distinguish available, runtime-dependent, and unavailable capabilities;
+3. for runtime-dependent capabilities, rely on them only when a concrete current-session tool establishes the path;
+4. inspect the skill registry only far enough to identify procedures that could materially change the approach;
+5. prefer using safe available read-only capabilities to reduce uncertainty before asking the user for information they need not supply; and
+6. revise the plan when discovered capabilities make a more direct, autonomous, or verifiable workflow possible.
+
+Capability discovery is not permission to load every matching skill. After discovery, route by the current material gate and keep the smallest sufficient active set.
+
+Do not repeatedly rediscover stable capabilities within the same objective unless the runtime surface changes, a claimed capability fails, or a new gate depends on a capability whose status is not yet established.
+
 ## Routing state
 
 Maintain these logical fields for complex tasks:
