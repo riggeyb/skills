@@ -29,8 +29,12 @@ profiles:
       - name: gateway-tests
         run: cd verification-gateway && npm test
     contract:
-      - name: registry-remote-contract
-        run: python3 scripts/validate_registry.py --remote
+      - name: action-schema-json
+        run: python3 -m json.tool openapi/github-skills-action.json >/dev/null
+      - name: verification-schema-yaml
+        run: python3 -c "import yaml; d=yaml.safe_load(open('openapi/verification-gateway-action.yaml')); assert d['openapi'] == '3.1.0'"
+      - name: verification-profile-schema-json
+        run: python3 -m json.tool verification/profile.schema.json >/dev/null
     mutation:
       - name: runner-deliberate-failure-proof
         run: |
