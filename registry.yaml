@@ -91,6 +91,20 @@ skills:
       - skills/director-certification/SKILL.md
     triggers: [Director Studio, director-studio-beta, Director CI, director-certify, exact SHA, certification, preflight evidence, mutation guards, Previz certification, promotion, merge certification, future worker]
 
+  - id: github-ci-evidence
+    title: GitHub CI Evidence
+    repository: riggeyb/skills
+    category: repository-engineering
+    mode: instruction
+    trust: first-party
+    update_policy: reviewed
+    last_reviewed: "2026-09-20"
+    ref: main
+    entrypoints:
+      - skills/github-ci-evidence/SKILL.md
+    triggers: [GitHub CI, GitHub Actions, workflow runs, workflow jobs, check runs, commit status, exact SHA, CI failure, CI diagnosis, stale CI, missing workflow]
+
+
   - id: repo-agent
     title: RepoAgent
     repository: OpenBMB/RepoAgent
