@@ -52,6 +52,19 @@ skills:
       - skills/tool-use-loop/SKILL.md
     triggers: [tools, API calls, actions, retries, verification, error recovery, coding with tools, browser automation]
 
+  - id: repository-engineering
+    title: Repository Engineering
+    repository: riggeyb/skills
+    category: repository-engineering
+    mode: instruction
+    trust: first-party
+    update_policy: reviewed
+    last_reviewed: "2026-09-20"
+    ref: main
+    entrypoints:
+      - skills/repository-engineering/SKILL.md
+    triggers: [repository mutation, edit file, patch file, insert file, GitHub write, commit, pull request, optimistic concurrency, conflict, exact bytes]
+
   - id: repo-agent
     title: RepoAgent
     repository: OpenBMB/RepoAgent
