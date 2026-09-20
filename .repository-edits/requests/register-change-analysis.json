@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "operation": "insert-after-unique",
+  "path": "registry.yaml",
+  "expected_source_git_blob_sha": "6cb5c3e3e25a62797ec62419febc407a6eb64e94",
+  "anchor": "  - id: test-strategy\n    title: Test Strategy\n    repository: riggeyb/skills\n    category: repository-engineering\n    mode: instruction\n    trust: first-party\n    update_policy: reviewed\n    last_reviewed: \"2026-09-20\"\n    ref: main\n    entrypoints:\n      - skills/test-strategy/SKILL.md\n    triggers: [test strategy, testing, regression test, unit test, integration test, end-to-end test, contract test, test failure, verification scope, risk-based testing]\n",
+  "insertion": "\n  - id: change-analysis\n    title: Codebase Change Analysis\n    repository: riggeyb/skills\n    category: repository-engineering\n    mode: instruction\n    trust: first-party\n    update_policy: reviewed\n    last_reviewed: \"2026-09-20\"\n    ref: main\n    entrypoints:\n      - skills/change-analysis/SKILL.md\n    triggers: [implementation planning, codebase analysis, change analysis, impact analysis, trace behavior, call path, dependency analysis, edit plan, affected files, codebase understanding]\n\n"
+}
