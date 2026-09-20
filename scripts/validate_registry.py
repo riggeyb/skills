@@ -81,6 +81,14 @@ def validate_static(registry: dict[str, Any], capabilities: dict[str, Any]) -> l
     if runtime.get("max_total_skills", 0) < max(runtime.get("max_instruction_skills", 0), runtime.get("max_reference_skills", 0)):
         errors.append("runtime.max_total_skills must be >= each per-mode budget")
 
+    control_categories = runtime.get("control_skill_categories", [])
+    if not isinstance(control_categories, list) or not all(isinstance(x, str) and x for x in control_categories):
+        errors.append("runtime.control_skill_categories must be a list of strings")
+        control_categories = []
+
+    if not isinstance(runtime.get("control_skills_exempt_from_budgets", False), bool):
+        errors.append("runtime.control_skills_exempt_from_budgets must be boolean")
+
     skills = registry.get("skills")
     if not isinstance(skills, list) or not skills:
         errors.append("registry.yaml: skills must be a non-empty list")
@@ -151,6 +159,9 @@ def validate_static(registry: dict[str, Any], capabilities: dict[str, Any]) -> l
                 errors.append(f"{loc}.aliases: duplicate alias {alias!r}")
             aliases.add(alias)
 
+        if skill.get("category") in control_categories and trust != "first-party":
+            errors.append(f"{loc}: control-category skills must be first-party")
+
         if trust == "first-party" and repo == "riggeyb/skills":
             for entry in skill.get("entrypoints", []):
                 if not (ROOT / entry).is_file():
@@ -175,6 +186,7 @@ def validate_static(registry: dict[str, Any], capabilities: dict[str, Any]) -> l
 def validate_remote(registry: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     skills = registry.get("skills", [])
+    defaults = registry.get("defaults", {}) if isinstance(registry.get("defaults"), dict) else {}
 
     for skill in skills:
         if not isinstance(skill, dict):
@@ -183,6 +195,14 @@ def validate_remote(registry: dict[str, Any]) -> list[str]:
         sid = skill.get("id", repo)
         if not isinstance(repo, str):
             continue
+
+        trust = skill.get("trust", defaults.get("trust"))
+        if trust == "first-party" and repo == "riggeyb/skills":
+            # First-party entrypoints are validated against the exact checked-out tree
+            # during static validation. This allows PRs to introduce a new first-party
+            # skill before that file exists on the default branch.
+            continue
+
         try:
             metadata = github_json(f"https://api.github.com/repos/{repo}")
         except HTTPError as e:
