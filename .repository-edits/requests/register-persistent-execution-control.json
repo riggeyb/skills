@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "operation": "insert-after-unique",
+  "path": "registry.yaml",
+  "expected_source_git_blob_sha": "7775ed24883df7e49260c21e4e616dfe660ef469",
+  "anchor": "    triggers: [think longer, deep reasoning, continue, keep going, evidence convergence, polling, pending CI, exact SHA, asynchronous evidence, consequential mutation]\n\n",
+  "insertion": "  - id: persistent-execution-control\n    title: Persistent Execution Control\n    repository: riggeyb/skills\n    category: runtime-control\n    mode: instruction\n    trust: first-party\n    update_policy: reviewed\n    last_reviewed: \"2026-09-21\"\n    ref: main\n    entrypoints:\n      - skills/persistent-execution-control/SKILL.md\n    triggers: [work session, persistent execution, autonomous execution, carry to completion, keep working, continue until complete, bounded polling, recover tool failure, pending CI, long-running task, status report, one call and return]\n\n",
+  "retrigger": 1
+}
