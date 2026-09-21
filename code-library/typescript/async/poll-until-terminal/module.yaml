@@ -1,0 +1,19 @@
+id: async.poll-until-terminal
+version: 1.0.0
+class: function
+language: typescript
+purpose: Poll an asynchronous observation until it reaches a terminal result.
+source: pollUntilTerminal.ts
+exports: [pollUntilTerminal, PollTerminalOptions]
+dependencies: []
+applicable_when:
+  - completion is externally observable by repeated reads
+  - polling must be bounded
+  - cancellation should be supported
+do_not_use_when:
+  - the operation completes synchronously
+  - the target repository already has compatible polling infrastructure
+  - an event or subscription mechanism is required by the target architecture
+verification:
+  - target repository typecheck
+  - target repository tests for terminal, timeout, and cancellation behavior
