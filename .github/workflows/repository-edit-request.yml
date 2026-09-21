@@ -47,30 +47,37 @@ jobs:
           python scripts/validate_registry.py
           python scripts/check_evals.py
 
-      - name: Inspect and commit only intended target
+      - name: Stage and certify only intended target
         shell: bash
         env:
           REQUEST: ${{ steps.request.outputs.request }}
         run: |
           set -euo pipefail
           target="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["path"])' "$REQUEST")"
-          mapfile -t changed < <(git diff --name-only --)
-          if [[ "${#changed[@]}" -ne 1 || "${changed[0]}" != "$target" ]]; then
-            echo "Expected exactly one tracked target change: $target" >&2
-            printf 'Tracked changed paths:\n' >&2
-            printf '  %s\n' "${changed[@]}" >&2
+          rm -rf .repository-edit-work
+          git diff --check
+          git add -- "$target"
+          mapfile -t staged < <(git diff --cached --name-only --)
+          if [[ "${#staged[@]}" -ne 1 || "${staged[0]}" != "$target" ]]; then
+            echo "Expected exactly one staged target change: $target" >&2
+            printf 'Staged paths:\n' >&2
+            printf '  %s\n' "${staged[@]}" >&2
             git status --porcelain=v1 >&2
             exit 2
           fi
-          rm -rf .repository-edit-work
-          git diff --check
-          git diff -- "$target"
-          if git diff --quiet -- "$target"; then
-            echo "Request produced no target change" >&2
+          if git diff --cached --quiet -- "$target"; then
+            echo "Request produced no staged target change" >&2
+            exit 2
+          fi
+          git diff --cached --check
+          git diff --cached -- "$target"
+          mapfile -t remaining_tracked < <(git diff --name-only --)
+          if [[ "${#remaining_tracked[@]}" -ne 0 ]]; then
+            echo "Unexpected unstaged tracked changes remain after staging target" >&2
+            printf '  %s\n' "${remaining_tracked[@]}" >&2
             exit 2
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- "$target"
           git commit -m "Apply repository edit request"
           git push origin "HEAD:${GITHUB_REF_NAME}"
