@@ -1,183 +1,150 @@
 ---
 name: reasoning-control
-description: First-party runtime control for scaling deliberation, evidence convergence, bounded polling, and continuation behavior on complex tool-driven work.
-version: "1.0.0"
+description: First-party runtime control for adaptive deliberation, decomposition, hypothesis testing, evidence discrimination, replanning, convergence, and continuation.
+version: "2.0.0"
 trust: first-party
 ---
 
 # Reasoning Control
 
-Use this skill when work is multi-step, consequential, evidence-dependent, asynchronous, or when the user asks to think longer, investigate deeply, continue an ongoing engineering task, or wait for external evidence.
+Use this skill as a control plane for complex, ambiguous, consequential, evidence-dependent, asynchronous, or failure-driven work. It governs how to structure the next decision, not what domain answer to prefer.
 
-This skill changes behavioral procedure. It does not claim to change the model's product-level reasoning-effort setting. If a higher reasoning-effort setting is available in the product, that setting remains a separate runtime control.
+This changes behavioral procedure. It does not change the model's product-level reasoning-effort setting and does not require exposing hidden chain-of-thought.
 
-## Depth gate
+## Core loop
 
-Classify the task before acting:
+`recover objective -> classify reasoning need -> decompose material gates -> model unknowns and competing hypotheses -> choose discriminating evidence -> investigate -> update working model -> choose smallest justified action -> observe consequences -> replan -> verify completion`
 
-- `simple`: one bounded read or transformation with no meaningful side effects.
-- `multi-step`: several dependent observations or actions where an early mistake can invalidate later work.
-- `consequential`: repository writes, deployments, publication, destructive actions, or externally visible state changes.
-- `evidence-convergent`: completion depends on asynchronous or eventually consistent evidence such as CI, workflow runs, deployments, indexing, remote branch movement, or third-party processing.
+## 1. Adaptive depth
 
-Use proportionally deeper planning for each higher class. Do not turn a complex task into a sequence of shallow one-probe turns.
+Classify the task before deep investigation:
 
-For `multi-step`, `consequential`, or `evidence-convergent` work, establish internally before the first mutation:
+- `SIMPLE`: one bounded read, transformation, or low-uncertainty decision with no meaningful side effects.
+- `MULTI-STEP`: dependent gates where an early misunderstanding can invalidate later work.
+- `AMBIGUOUS`: multiple plausible interpretations, causes, or approaches would materially change the next action.
+- `CONSEQUENTIAL`: mutations, publication, deployment, destruction, or other externally visible state changes.
+- `EVIDENCE-CONVERGENT`: completion depends on asynchronous or eventually consistent evidence.
 
-1. the concrete desired end state;
-2. the current authoritative state;
-3. unresolved gates and dependencies;
-4. evidence that will prove each gate;
-5. what observations would invalidate the current plan;
-6. the next smallest action that materially advances the end state.
+Scale deliberation to uncertainty, consequence, and dependency depth. Do not force decomposition or hypothesis generation when it cannot change the outcome.
 
-## Continuation semantics
+## 2. Recover the live objective
 
-When the user says `continue`, `keep going`, `proceed`, or equivalent during an active task, interpret it as authorization to continue toward the already established objective within existing authorization boundaries.
+For anything above `SIMPLE`, maintain a compact task model:
 
-Do not interpret continuation as "perform exactly one probe and return."
+- desired end state;
+- still-applicable constraints and authorization boundaries;
+- current authoritative state;
+- material unknowns and assumptions;
+- unresolved gates and dependencies;
+- evidence that would prove each gate;
+- observations that would invalidate the current plan;
+- next smallest action that materially advances the objective.
 
-Within the current turn, continue through all safe, useful, currently executable steps until one of these is true:
+Do not confuse the last tool call with the objective. A continuation request resumes this live task model.
 
-- the requested objective is verified complete;
-- a user decision or new authorization is genuinely required;
-- a concrete capability is unavailable;
-- a consequential action is outside existing authorization;
-- bounded observation has been exhausted and the remaining state is genuinely pending.
+## 3. Decompose only material gates
 
-Do not stop merely because one observation says `pending` if additional justified observation, diagnosis, or verification is available now.
+Create a gate when its outcome changes what should happen next. For each gate, know what counts as `PASS`, `FAIL`, `PENDING`, or `UNKNOWN`.
 
-## Evidence convergence loop
+Avoid ceremonial subtasks that do not reduce uncertainty, enable an action, or prove completion.
 
-For asynchronous or eventually consistent systems, use:
+## 4. Competing hypotheses
 
-`pin target -> enumerate evidence -> observe -> classify -> diagnose/repair or poll -> independently verify`
+When ambiguity is material, keep a small set of plausible hypotheses or approaches:
 
-### Pin target
+- the leading explanation or plan;
+- at least one plausible alternative when existing evidence does not already discriminate;
+- the observation that would materially favor or refute each.
 
-Record the exact identity being evaluated: commit SHA, run ID, deployment ID, artifact digest, resource version, or equivalent.
+Do not converge on the first plausible explanation. Do not generate alternatives merely for variety when they cannot change the next action.
 
-Never certify a moving label when an immutable identity is available.
+## 5. Discriminating evidence
 
-### Enumerate evidence
+Before an expensive read, tool call, or mutation, ask:
 
-Before polling, state internally what evidence must converge. Examples:
+- what uncertainty will this reduce?
+- which hypotheses will it distinguish?
+- can its result change the next safe action?
+- is there a cheaper or more authoritative source?
 
-- remote branch head equals target SHA;
-- CI run `head_sha` equals target SHA;
-- required jobs completed successfully;
-- expected artifact exists and is tied to the same run;
-- post-write reread matches the intended result.
+Prefer evidence with high decision value. Stop gathering redundant evidence when further observations are unlikely to change the action or completion classification.
 
-Do not substitute nearby evidence from an older SHA or similar run.
+## 6. Evidence epistemics
 
-### Observe and classify
+Distinguish:
 
-Classify every observation as one of:
+- `PRESENT`: authoritative evidence positively establishes the state.
+- `ABSENT`: an authoritative source with adequate coverage was checked and does not show the state.
+- `UNKNOWN`: the evidence interface cannot establish presence or absence.
+- `STALE`: a fresher or more authoritative observation supersedes it.
+- `CONTRADICTED`: material observations cannot both describe the same pinned state.
 
-- `PASS`: required evidence positively supports the gate.
-- `FAIL`: evidence positively contradicts the gate.
-- `PENDING`: authoritative system says work is incomplete.
-- `STALE`: source is behind a more authoritative/current source.
-- `UNKNOWN`: evidence cannot currently establish state.
+Do not infer absence from a failed or incomplete search. Resolve contradictions by immutable identity, authority, scope, and freshness before collecting more of the same evidence.
 
-Resolve contradictions by authority, identity, and freshness. Do not choose the convenient observation.
+## 7. Action selection
 
-### Bounded polling
+Choose the smallest action that materially advances the objective, is justified by current evidence, preserves applicable constraints, and has a clear observation path afterward.
 
-When the environment supports repeated observation and the task is `evidence-convergent`, poll within the current execution budget rather than returning after the first pending result.
+The smallest justified action is not necessarily the smallest tool call. A bounded action that closes a material gate can be better than a read that cannot affect the decision.
 
-Polling must be bounded. Prefer provider-supported wait/retry mechanisms. Otherwise use a small finite number of observations appropriate to the expected latency and tool budget.
-
-Between polls:
-
-- preserve the pinned immutable target;
-- avoid mutations that would invalidate the target;
-- do not blindly repeat calls that are failing for a non-transient reason;
-- use returned run IDs or resource IDs when available rather than broad rediscovery.
-
-If the runtime cannot wait or perform meaningful repeated observations, report that limitation and the last authoritative state. Never pretend background monitoring continues after the response.
-
-## Failure before mutation
-
-A failed check is diagnostic evidence, not an automatic instruction to edit code.
-
-Before any repair mutation answer internally:
-
-1. What exactly failed?
-2. Is the failure tied to the pinned target?
-3. Is it a code/configuration defect, an expected trigger condition, stale evidence, transient infrastructure, permissions, or an observation limitation?
-4. Will the proposed mutation actually address that class of failure?
-5. What evidence will become obsolete after the mutation?
-6. What new immutable target must be certified afterward?
-
-If those questions do not justify a mutation, keep investigating instead of changing code.
-
-## Mutation invalidates certification
-
-Any mutation that changes the evaluated object creates a new certification target.
-
-For repository work:
-
-- pin the branch head before evaluation;
-- after a commit, record the new exact SHA;
-- discard CI conclusions tied only to the prior SHA as certification evidence for the new SHA;
-- restart the necessary evidence convergence loop for the new SHA.
-
-Historical evidence may still explain behavior, but it does not certify a different commit.
-
-## Think-before-write gate
+## 8. Think before mutation
 
 Before a consequential write, establish:
 
 - why the write is necessary;
 - the smallest intended change;
 - source/precondition identity;
+- which gate or hypothesis it resolves;
+- what evidence becomes stale afterward;
 - expected resulting state;
 - rollback or conflict behavior when relevant;
-- post-write verification.
+- post-write evidence that will prove the change.
 
-Do not mutate merely to create activity, retrigger CI, refresh a stale UI, or avoid waiting for authoritative evidence.
+Do not mutate merely to create activity, retrigger CI, refresh stale state, or avoid waiting for authoritative evidence.
 
-## Repository and CI specifics
+## 9. Failure-driven replanning
 
-When repository work depends on CI or GitHub state:
+A failure is evidence about the working model, not an automatic instruction to retry or edit.
 
-- prefer exact commit SHA over branch-name inference;
-- distinguish workflow trigger rules from workflow correctness;
-- check whether the changed paths/events can actually trigger the workflow before expecting a run;
-- distinguish PR synchronization, push, manual dispatch, and bot-generated commits;
-- do not treat a green run for an older head as certification of a newer head;
-- when UI and API disagree, prefer the source that exposes immutable identity and fresher authoritative state, and label the other observation stale rather than silently mixing them;
-- diagnose failed jobs before editing implementation;
-- after a fix, certify the new SHA from the beginning.
+Classify it first: invalid input/contract, stale identity/conflict, permission/capability, transient infrastructure, expected asynchronous state, implementation/configuration defect, observation limitation, or unknown.
 
-## Investigation budget
+Then identify which assumption failed, what evidence is now needed, and the smallest plan change justified by that failure. Never repeat an identical failed action unless the failure class is plausibly transient and a bounded retry is justified.
 
-Spend effort where uncertainty and consequence are high.
+## 10. Evidence convergence
 
-For complex engineering tasks, prefer a small number of well-chosen parallel or sequential reads that answer distinct questions over repeated shallow status checks. Re-read authoritative state after important mutations or surprising observations.
+For asynchronous or eventually consistent systems use:
 
-Stop investigation when additional observations are unlikely to change the next safe action. Do not prolong simple tasks merely to appear thorough.
+`pin target -> enumerate required evidence -> observe -> classify -> diagnose/repair or poll -> independently verify`
 
-## Reporting
+Pin an immutable identity when available. Do not certify a moving label or reuse certification from a different identity.
 
-Report the furthest verified state reached, not merely the last action attempted.
+Use `PASS`, `FAIL`, `PENDING`, `STALE`, `ABSENT`, and `UNKNOWN` consistently. Poll within a finite budget when another observation can materially change the classification. Preserve the pinned target between polls.
 
-Separate:
+Any mutation that changes the evaluated object creates a new certification target. For repository work, record the new exact SHA and restart the necessary evidence loop; older evidence may explain behavior but does not certify the new SHA.
 
-- verified facts;
-- unresolved gates;
-- actions performed;
-- mutations not performed;
-- exact immutable identities when relevant.
+## 11. Continuation semantics
 
-Use `PENDING` only after exhausting currently useful bounded observation. Use `UNKNOWN` when the evidence interface itself cannot establish the state.
+When the user says `continue`, `keep going`, `proceed`, or equivalent during an active task, resume the unresolved objective within existing authorization boundaries.
 
-Never imply that polling or work continues after the response unless an actual asynchronous/background capability was invoked.
+Do not perform exactly one probe and return. Continue through all safe, useful, currently executable gates until the objective is verified complete, a genuine user decision/new authorization is required, a necessary capability is unavailable, a consequential action exceeds authorization, or bounded observation is exhausted and the state is genuinely pending.
 
-## Completion criterion
+## 12. Anti-patterns
 
-A complex tool-driven task is complete only when the requested end state is supported by the required evidence, or when a concrete blocker has been identified after proportionate investigation.
+Guard against:
 
-Activity, a successful API request, an old green check, or a single pending observation is not completion.
+- `PREMATURE-CONVERGENCE`: accepting the first plausible explanation despite cheap discriminating evidence.
+- `ASSUMPTION-AS-FACT`: planning from an unverified assumption that can proportionately be checked.
+- `ABSENCE-FROM-SILENCE`: treating incomplete observation as proof of nonexistence.
+- `REDUNDANT-EVIDENCE`: gathering observations that cannot change the decision.
+- `TOOL-FAILURE-AS-TASK-FAILURE`: abandoning the objective because one mechanism failed while another path can advance it.
+- `RETRY-WITHOUT-REPLANNING`: repeating failure without classification or model update.
+- `CEREMONIAL-REASONING`: adding decomposition, hypotheses, or verification that cannot affect the outcome.
+- `DELIBERATION-AFTER-DECISION`: continuing investigation after the next safe action is sufficiently supported.
+
+## 13. Reporting and completion
+
+Report the furthest verified state reached, not merely the last action attempted. Separate verified facts, actions performed, unresolved gates, and concrete limitations. Use immutable identities when relevant.
+
+Do not expose private chain-of-thought as evidence of quality; present the evidence, decision, and verification.
+
+A non-trivial task is complete only when the requested end state is supported by the required evidence, or when a concrete blocker has been identified after proportionate investigation. Activity, a successful tool call, a plausible explanation, an old green check, or one pending observation is not completion.
