@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "operation": "insert-after-unique",
+  "path": "registry.yaml",
+  "expected_source_git_blob_sha": "70eb71e2bc4386453f16f8c0247e16b1d55022d6",
+  "anchor": "    triggers: [work session, persistent execution, autonomous execution, carry to completion, keep working, continue until complete, bounded polling, recover tool failure, pending CI, long-running task, status report, one call and return]\n\n",
+  "insertion": "  - id: resumable-execution-control\n    title: Resumable Execution Control\n    repository: riggeyb/skills\n    category: runtime-control\n    mode: instruction\n    trust: first-party\n    update_policy: reviewed\n    last_reviewed: \"2026-09-21\"\n    ref: main\n    entrypoints:\n      - skills/resumable-execution-control/SKILL.md\n    triggers: [resumable execution, durable objective, asynchronous handoff, external wait, execution boundary, continue, resume objective, continuation state, state machine, GitHub controller, callback, long-running task]\n\n",
+  "retrigger": 1
+}
