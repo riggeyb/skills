@@ -41,6 +41,19 @@ class RepositoryEditRequestTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "no content change"):
             mod.apply({"version": 2, "operation": "replace-unique", "old": "beta", "new": "beta"}, b"alpha beta")
 
+    def test_delete_file_returns_deletion_intent(self) -> None:
+        source = b"delete me"
+        result, metadata = mod.apply({"version": 3, "operation": "delete-file"}, source)
+        self.assertIsNone(result)
+        self.assertEqual(metadata["operation"], "delete-file")
+        self.assertEqual(metadata["source_sha256"], hashlib.sha256(source).hexdigest())
+        self.assertIsNone(metadata["result_sha256"])
+        self.assertEqual(metadata["result_bytes"], 0)
+
+    def test_delete_file_requires_version_3(self) -> None:
+        with self.assertRaisesRegex(SystemExit, "unsupported request"):
+            mod.apply({"version": 2, "operation": "delete-file"}, b"delete me")
+
     def test_verify_source_rejects_stale_git_blob(self) -> None:
         with self.assertRaisesRegex(SystemExit, "source Git blob SHA mismatch"):
             mod.verify_source({"expected_source_git_blob_sha": "0" * 40}, b"fresh")
