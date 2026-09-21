@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "operation": "delete-file",
+  "path": ".repository-edits/requests/register-resumable-execution-control.json",
+  "expected_source_git_blob_sha": "8ea5c5280b99f4c45c2eb713ef704f525302624c"
+}

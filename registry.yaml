@@ -105,6 +105,19 @@ skills:
       - skills/persistent-execution-control/SKILL.md
     triggers: [work session, persistent execution, autonomous execution, carry to completion, keep working, continue until complete, bounded polling, recover tool failure, pending CI, long-running task, status report, one call and return]
 
+  - id: resumable-execution-control
+    title: Resumable Execution Control
+    repository: riggeyb/skills
+    category: runtime-control
+    mode: instruction
+    trust: first-party
+    update_policy: reviewed
+    last_reviewed: "2026-09-21"
+    ref: main
+    entrypoints:
+      - skills/resumable-execution-control/SKILL.md
+    triggers: [resumable execution, durable objective, asynchronous handoff, external wait, execution boundary, continue, resume objective, continuation state, state machine, GitHub controller, callback, long-running task]
+
   - id: director-certification
     title: Director Certification
     repository: riggeyb/skills
