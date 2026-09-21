@@ -1,147 +1,89 @@
 ---
 name: github-ci-evidence
-description: First-party procedure for exact-SHA GitHub CI inspection, evidence classification, trigger diagnosis, and repair decisions.
-version: "1.0.0"
+description: First-party procedure for exact-SHA GitHub CI inspection, automatic failure-evidence consumption, trigger diagnosis, and repair convergence.
+version: "2.0.0"
 trust: first-party
 ---
 
 # GitHub CI Evidence
 
-Use this skill when repository work depends on pull-request state, GitHub Actions runs or jobs, check runs, commit statuses, or deciding whether CI evidence certifies an exact commit. Combine it with `reasoning-control`; combine with `repository-engineering` before any repair mutation.
+Use this skill for GitHub Actions, browser/test evidence, check runs, commit statuses, and exact-SHA certification. Combine with `reasoning-control`; use `repository-engineering` before repair mutation.
 
-## Evidence target
+## Prime directive
 
-Pin the exact commit SHA before interpreting CI. Branch names and PR numbers locate work; they are not certification identities.
+Optimize for evidence latency, not weaker evidence. Prefer machine-actionable failure diagnostics that become repository-readable as part of failing CI. Artifact recovery is a fallback.
 
-Establish, when relevant:
+## Convergence state
 
-- PR head SHA and base SHA;
-- current branch head SHA;
-- workflow run `head_sha`;
-- check-run commit identity;
-- combined-status SHA.
+Maintain:
+- `certification_target_sha`: implementation SHA being certified;
+- `diagnostic_source_sha`: SHA that produced the failure;
+- workflow run/job/step identity;
+- artifact ID/name when retained;
+- evidence locator;
+- normalized `failure_fingerprint`;
+- current hypothesis and next gate.
 
-If these disagree, classify evidence by identity before interpreting success or failure.
+Never confuse an evidence/bookkeeping commit with the implementation SHA an artifact describes.
+
+## Exact-SHA discovery
+
+Discover CI by target SHA first, not assumed event type:
+
+`pin SHA -> enumerate runs/checks/statuses across relevant events -> inspect exact-SHA runs -> inspect jobs -> classify`
+
+Do not prematurely filter to `push` or `pull_request` unless trigger semantics prove it authoritative. Once a run ID is known, inspect it directly.
 
 ## Evidence hierarchy
 
-Use the narrowest authoritative evidence that answers the question:
+Prefer:
+1. repository-readable SHA-bound machine diagnostic from the exact failing run;
+2. direct check/status and job/log evidence;
+3. bounded materialized artifact evidence whose manifest binds run + source SHA + artifact identity;
+4. artifact metadata;
+5. PR/branch metadata for moving-head identity.
 
-1. commit/check/status evidence bound directly to the target SHA;
-2. workflow runs whose `head_sha` exactly equals the target;
-3. jobs belonging to those exact runs;
-4. PR metadata for current head/base identity and merge state;
-5. branch state for current moving-head identity.
+Evidence from another SHA cannot certify the target.
 
-Do not treat a green workflow, job, check, or status from another SHA as certification.
+## Evidence routing
 
-Checks and legacy commit statuses are separate GitHub mechanisms. Inspect both when repository policy or observed evidence makes both relevant; do not assume one subsumes the other.
+On failure use the first available decisive route:
 
-## Inspection procedure
+`repository-readable diagnostic -> direct job/log -> directly consumable artifact -> materialized artifact -> metadata-only diagnosis`
 
-For a target SHA:
+If one route is unavailable, immediately advance to the next known viable route. Do not return a capability blocker while a proven fallback can advance the objective. A repository's proven push-triggered materializer remains valid when workflow dispatch is unavailable.
 
-`pin SHA -> inspect PR/branch identity -> enumerate exact-SHA runs/checks/statuses -> inspect relevant jobs -> classify required evidence`
+## Automatic diagnostic publication
 
-Prefer exact filters such as `head_sha` when available. Once a run ID is known, inspect that run or its jobs directly rather than repeatedly rediscovering broadly.
+Prefer CI that emits a bounded text/JSON diagnostic in the same failing run and makes it readable through ordinary repository-content primitives. Bind it to immutable identities.
 
-For each required signal classify:
+Include when available: schema version, source SHA, run ID/attempt, workflow/job/step, viewport/test identity, normalized error class, failing assertion/locator summary, bounded exception excerpt, console/page errors, screenshot/artifact names and SHA-256 hashes, timestamp, and failure fingerprint.
 
-- `PASS` - completed evidence positively satisfies the requirement for the target SHA.
-- `FAIL` - completed evidence positively violates it.
-- `PENDING` - authoritative evidence exists but is not complete.
-- `ABSENT`  - no matching evidence was found where evidence may legitimately not have been created.
-- `STALE`  - evidence belongs to a different SHA or superseded run.
-- `UNKNOWN` - available interfaces cannot establish the state.
+Keep screenshots as artifacts; make the actionable diagnosis text-readable without ZIP access. Prefer a dedicated deterministic evidence ref/path keyed by run ID and source SHA rather than mutating the feature branch.
 
-`ABSENT` is not automatically `FAIL`. Diagnose whether a run/check should exist before deciding repair is needed.
+## Failure fingerprinting
+
+Compare each failure with the previous diagnostic:
+- changed fingerprnt after targeted repair: the test advanced; diagnose the new failure;
+- identical fingerprint: verify the repair reached the tested SHA and affects the asserted contract before another mutation;
+- ambiguous fingerprint: gather the smallest discriminating evidence.
 
 ## Trigger diagnosis
 
-When expected workflow evidence is absent, investigate trigger semantics before changing implementation.
+If expected evidence is absent, inspect event type, branch/tag filters, paths, workflow presence, bot/event suppression, PR synchronization, conditions, and permissions before changing implementation. Do not make unrelated commits merely to retrigger CI.
 
-Distinguish:
+## Repair and certification
 
-- `push`, `pull_request`, `workflow_dispatch`, schedule, and other events;
-- branch and tag filters;
-- path and path-ignore filters;
-- workflow-file presence on the relevant ref;
-- bot-generated commits and event suppression;
-- PR synchronization versus direct pushes;
-- skipped jobs caused by job/step conditions;
-- permissions or configuration failures from implementation failures.
+A repair creates a new target:
 
-A missing run caused by trigger rules is not evidence that the code failed.
+`record new implementation SHA -> mark old certification evidence stale -> rediscover exact-SHA evidence -> certify or diagnose`
 
-## Failure diagnosis
+Old evidence remains diagnostic provenance only.
 
-When a run failed:
+For `PENDINGa, poll the known run/materialization target within a finite useful budget. Do not perform one observation and return when bounded polling can materially advance the objective.
 
-1. verify its `head_sha` equals the pinned target;
-2. identify the failing job(s);
-3. distinguish cancellation, timeout, infrastructure, permissions, configuration, test failure, lint/type/schema failure, and expected conditional behavior;
-4. inspect the smallest available evidence that discriminates the failure class;
-5. mutate only when evidence supports a repository defect that the proposed edit addresses.
+Prefer evidence publication that does not mutate the feature branch. If a legacy request-file mechanism must move the branch head, retain separate diagnostic and certification identities.
 
-Do not retrigger CI by making an unrelated commit.
+## Reporting and completion
 
-If logs are unavailable, say what the job metadata establishes and what remains unknown. Do not invent a failure cause from a job name alone.
-
-## Reruns and duplicate evidence
-
-Multiple runs may exist for one SHA. Prefer the newest authoritative attempt for current state while retaining earlier attempts as diagnostic history.
-
-Do not combine a passing job from one run with a failing or missing job from another run into a synthetic green result unless repository policy explicitly defines that composition.
-
-For check runs, account for reruns/superseded attempts. Prefer latest instances when the API filter and repository policy support that interpretation.
-
-## Repair invalidates certification
-
-A repair commit creates a new target SHA.
-
-After mutation:
-
-`record new SHA -> discard prior SHA as certification target -> rediscover exact-SHA evidence -> inspect required jobs/checks/statuses -> certify or diagnose`
-
-Old evidence can explain why the repair was made, but cannot certify the new commit.
-
-## PR and merge evidence
-
-A PR being open, mergeable, or merged is distinct from CI certification.
-
-Before relying on PR state:
-
-- confirm the PR head SHA is the target under evaluation;
-- inspect changed files when scope matters;
-- keep merge state separate from check/run conclusions.
-
-After merge, record the resulting merge/base commit identity when available. Do not assume the pre-merge head SHA and resulting base-branch SHA are identical.
-
-## Bounded convergence
-
-For pending exact-SHA evidence, follow `reasoning-control` bounded polling. Poll the known run/check rather than broad repository state when possible.
-
-Stop polling when:
-
- - required evidence converges;
-- a failure needs diagnosis or repair;
-- the target SHA changes;
-- the expected evidence is proven absent due to trigger semantics;
-- useful bounded observation is exhausted.
-
-## Reporting
-
-Report exact immutable identities and the furthest supported state. A useful CI report distinguishes:
-
-- target SHA;
-- matching evidence found;
-- passing, failing, pending, absent, stale, or unknown signals;
-- diagnosed failure class when supported;
-- whether a mutation was performed;
-- whether the current target is certified by the evidence actually observed.
-
-Never call a target certified merely because some CI is green.
-
-## Completion criterion
-
-CI-dependent work is complete only when the required evidence for the exact target SHA has converged, or when a concrete failure, trigger condition, or observation limitation has been established strongly enough to determine the next safe action.
+Report immutable identities, furthest verified state, failure fingerprint when useful, action taken, and current certification target. CI-dependent work is complete only when required evidence for the exact target converges, or a concrete blocker remains after all known safe evidence routes and proportionate investigation are exhausted.
