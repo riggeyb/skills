@@ -92,6 +92,19 @@ skills:
       - skills/reasoning-control/SKILL.md
     triggers: [think longer, deep reasoning, continue, keep going, evidence convergence, polling, pending CI, exact SHA, asynchronous evidence, consequential mutation]
 
+  - id: persistent-execution-control
+    title: Persistent Execution Control
+    repository: riggeyb/skills
+    category: runtime-control
+    mode: instruction
+    trust: first-party
+    update_policy: reviewed
+    last_reviewed: "2026-09-21"
+    ref: main
+    entrypoints:
+      - skills/persistent-execution-control/SKILL.md
+    triggers: [work session, persistent execution, autonomous execution, carry to completion, keep working, continue until complete, bounded polling, recover tool failure, pending CI, long-running task, status report, one call and return]
+
   - id: director-certification
     title: Director Certification
     repository: riggeyb/skills
