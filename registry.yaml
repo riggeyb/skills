@@ -225,6 +225,19 @@ skills:
     entrypoints: [README.md]
     triggers: [repository understanding, code documentation, repo analysis]
 
+  - id: product-ui-design
+    title: Product UI Design
+    repository: riggeyb/skills
+    category: ui-ux-design
+    mode: instruction
+    trust: first-party
+    update_policy: reviewed
+    last_reviewed: "2026-09-20"
+    ref: main
+    entrypoints:
+      - skills/product-ui-design/SKILL.md
+    triggers: [product UI design, UI concept, UX concept, interface design, visual proposal, image proposal, design creativity, creative direction, screen contract, product design, design critique]
+
   - id: fast-llm-agent-mcp
     title: Fast LLM Agent MCP
     repository: omerbsezer/Fast-LLM-Agent-MCP
