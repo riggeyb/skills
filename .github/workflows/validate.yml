@@ -33,6 +33,9 @@ jobs:
       - name: Test deterministic repository edit preparation
         run: python scripts/test_repository_edit.py
 
+      - name: Test deterministic repository edit request gateway
+        run: python scripts/test_repository_edit_request.py
+
       - name: Validate GPT Actions schema compatibility
         run: python scripts/validate_actions_schema.py
 
