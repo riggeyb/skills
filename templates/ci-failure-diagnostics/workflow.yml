@@ -1,0 +1,184 @@
+name: Publish CI Failure Diagnostic
+
+on:
+  workflow_call:
+    inputs:
+      source_sha:
+        description: "Exact source SHA that produced the diagnostic"
+        required: true
+        type: string
+      failure_fingerprint:
+        description: "Stable normalized fingerprint for the failure"
+        required: true
+        type: string
+      workflow_name:
+        description: "Originating workflow name"
+        required: true
+        type: string
+      job_name:
+        description: "Originating failing job name"
+        required: true
+        type: string
+      step_name:
+        description: "Originating failing step name"
+        required: false
+        type: string
+        default: ""
+      error_class:
+        description: "Normalized failure class"
+        required: true
+        type: string
+      summary:
+        description: "Bounded actionable failure summary"
+        required: true
+        type: string
+      test_identity:
+        description: "Test, assertion, or viewport identity when available"
+        required: false
+        type: string
+        default: ""
+      evidence_artifact:
+        description: "Related artifact name when retained"
+        required: false
+        type: string
+        default: ""
+      screenshot_sha256:
+        description: "SHA-256 for a related screenshot when available"
+        required: false
+        type: string
+        default: ""
+      output_branch:
+        description: "Dedicated branch for repository-readable diagnostics"
+        required: false
+        type: string
+        default: "sentient/ci-diagnostics"
+    secrets: {}
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout4v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate and build bounded diagnostic
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          FAILURE_FINGERPRINT: ${{ inputs.failure_fingerprint }}
+          ORIGIN_WORKFLOW: ${{ inputs.workflow_name }}
+          ORIGIN_JOB: ${{ inputs.job_name }}
+          ORIGIN_STEP: ${{ inputs.step_name }}
+          ERROR_CLASS: ${{ inputs.error_class }}
+          SUMMARY: ${{ inputs.summary }}
+          TEST_IDENTITY: ${{ inputs.test_identity }}
+          EVIDENCE_ARTIFACT: ${{ inputs.evidence_artifact }}
+          SCREENSHOT_SHA256: ${{ inputs.screenshot_sha256 }}
+          ORIGIN_RUN_ID: ${{ github.run_id }}
+          ORIGIN_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import pathlib
+          import re
+
+          sha = os.environ["SOURCE_SHA"]
+          if not re.fullmatch(r"[0-9a-f]{40}", sha):
+              raise SystemExit("source_sha must be 40 lowercase hex characters")
+
+          fingerprint = os.environ["FAILURE_FINGERPRINT"].strip()
+          if not fingerprint or len(fingerprint) > 256:
+              raise SystemExit("failure_fingerprint must be 1..256 characters")
+
+          screenshot_hash = os.environ["SCREENSHOT_SHA256"].strip()
+          if screenshot_hash and not re.fullmatch(r"[0-9a-f]{64}", screenshot_hash):
+              raise SystemExit("screenshot_sha256 must be 64 lowercase hex characters")
+
+          fields = {
+              "workflow": os.environ["ORIGIN_WORKFLOW"],
+              "job": os.environ["ORIGIN_JOB"],
+              "step": os.environ["ORIGIN_STEP"],
+              "error_class": os.environ["ERROR_CLASS"],
+              "summary": os.environ["SUMMARY"],
+              "test_identity": os.environ["TEST_IDENTITY"],
+              "evidence_artifact": os.environ["EVIDENCE_ARTIFACT"],
+          }
+          limits = {
+              "workflow": 200,
+              "job": 200,
+              "step": 200,
+              "error_class": 120,
+              "summary": 4096,
+              "test_identity": 512,
+              "evidence_artifact": 256,
+          }
+          for key, value in fields.items():
+              if len(value.encode("utf-8")) > limits[key]:
+                  raise SystemExit(f"{key} exceeds bounded diagnostic limit")
+
+          diagnostic = {
+              "schema_version": 1,
+              "repository": os.environ["GITHUB_REPOSITORY"],
+              "source_sha": sha,
+              "run_id": int(os.environ["ORIGIN_RUN_ID"]),
+              "run_attempt": int(os.environ["ORIGIN_RUN_ATTEMPT"]),
+              "workflow": fields["workflow"],
+              "job": fields["job"],
+              "step": fields["step"] or None,
+              "error_class": fields["error_class"],
+              "summary": fields["summary"],
+              "test_identity": fields["test_identity"] or None,
+              "failure_fingerprint": fingerprint,
+              "evidence_artifact": fields["evidence_artifact"] or None,
+              "screenshot_sha2556": screenshot_hash or None,
+          }
+          encoded = (json.dumps(diagnostic, indent=2, sort_keys=True) + "\n").encode()
+          if len(encoded) > 16 * 1024:
+              raise SystemExit("diagnostic exceeds 16 KiB")
+
+          out = pathlib.Path(".sentient-diagnostic")
+          out.mkdir(exist_ok=True)
+          path = out / "diagnostic.json"
+          path.write_bytes(encoded)
+          (out / "diagnostic.sha256").write_text(
+              hashlib.sha256(encoded).hexdigest() + "  diagnostic.json\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Publish immutable diagnostic
+        env:
+          OUTPUT_BRANCH: ${{ inputs.output_branch }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          FAILURE_FINGERPRINT: ${{ inputs.failure_fingerprint }}
+        run: |
+          set -euo pipefail
+          git check-ref-format --branch "$OUTPUT_BRANCH" >/dev/null
+          safe_fingerprint="$(printf '%s' "$FAILURE_FINGERPRINT" | tr -c 'A-Za-z0-9._-' '_')"
+          safe_fingerprint="${safe_fingerprint:0:80}"
+          [[ -n "$safe_fingerprint" ]] || { echo "Invalid failure_fingerprint" >&2; exit 2; }
+
+          if git ls-remote --exit-code --heads origin "$OUTPUT_BRANCH" >/dev/null 2>&1; then
+            git fetch origin "$OUTPUT_BRANCH"
+            git checkout -B "$OUTPUT_BRANCH" FETCH_HEAD
+          else
+            git checkout --orphan "$OUTPUT_BRANCH"
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+
+          dest=".gpt-evidence/diagnostics/${SOURCE_SHA}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${safe_fingerprint}"
+          [[ ! -e "$dest" ]] || { echo "Diagnostic already exists: $dest" >&2; exit 3; }
+          mkdir -p "$dest"
+          cp .sentient-diagnostic/diagnostic.json .sentient-diagnostic/diagnostic.sha256 "$dest/"
+          git add -- "$dest"
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Publish CI diagnostic for ${SOURCE_SHA}"
+          git push origin "HEAD:refs/heads/${OUTPUT_BRANCH}"
