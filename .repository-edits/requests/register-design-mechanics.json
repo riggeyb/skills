@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "operation": "insert-after-unique",
+  "path": "registry.yaml",
+  "expected_source_git_blob_sha": "b222564116e302c04488d5086004a4a20c411da3",
+  "anchor": "  - id: artifact-quality\n    title: Artifact Quality\n    repository: riggeyb/skills\n    category: runtime-control\n    mode: instruction\n    trust: first-party\n    update_policy: reviewed\n    last_reviewed: \"2026-09-21\"\n    ref: main\n    entrypoints:\n      - skills/artifact-quality/SKILL.md\n    triggers: [artifact quality, self critique, iterate artifact, revise output, quality convergence, completeness, fidelity, genericness, verify output, inspect artifact, continue after generation]",
+  "insertion": "\n\n  - id: design-mechanics\n    title: Design Mechanics\n    repository: riggeyb/skills\n    category: ui-ux-design\n    mode: instruction\n    trust: first-party\n    update_policy: reviewed\n    last_reviewed: \"2026-09-21\"\n    ref: main\n    entrypoints:\n      - skills/design-mechanics/SKILL.md\n    triggers: [design mechanics, design tokens, semantic color, color scale, interaction states, component primitives, ASIA, focus management, spacing, hierarchy, component composition, Tailwind theme, Radix]"
+}

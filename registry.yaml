@@ -251,6 +251,19 @@ skills:
       - skills/artifact-quality/SKILL.md
     triggers: [artifact quality, self critique, iterate artifact, revise output, quality convergence, completeness, fidelity, genericness, verify output, inspect artifact, continue after generation]
 
+  - id: design-mechanics
+    title: Design Mechanics
+    repository: riggeyb/skills
+    category: ui-ux-design
+    mode: instruction
+    trust: first-party
+    update_policy: reviewed
+    last_reviewed: "2026-09-21"
+    ref: main
+    entrypoints:
+      - skills/design-mechanics/SKILL.md
+    triggers: [design mechanics, design tokens, semantic color, color scale, interaction states, component primitives, ASIA, focus management, spacing, hierarchy, component composition, Tailwind theme, Radix]
+
   - id: fast-llm-agent-mcp
     title: Fast LLM Agent MCP
     repository: omerbsezer/Fast-LLM-Agent-MCP
