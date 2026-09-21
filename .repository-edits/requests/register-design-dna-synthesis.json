@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "operation": "insert-after-unique",
+  "path": "registry.yaml",
+  "expected_source_git_blob_sha": "533c619a1885fe8517f712ac7a67ac55b6357ee7",
+  "anchor": "  - id: design-mechanics\n    title: Design Mechanics\n    repository: riggeyb/skills\n    category: ui-ux-design\n    mode: instruction\n    trust: first-party\n    update_policy: reviewed\n    last_reviewed: \"2026-09-21\"\n    ref: main\n    entrypoints:\n      - skills/design-mechanics/SKILL.md\n    triggers: [design mechanics, design tokens, semantic color, color scale, interaction states, component primitives, ASIA, focus management, spacing, hierarchy, component composition, Tailwind theme, Radix]",
+  "insertion": "\n\n  - id: design-dna-synthesis\n    title: Design DNA Synthesis\n    repository: riggeyb/skills\n    category: ui-ux-design\n    mode: instruction\n    trust: first-party\n    update_policy: reviewed\n    last_reviewed: \"2026-09-21\"\n    ref: main\n    entrypoints:\n      - skills/design-dna-synthesis/SKILL.md\n    triggers: [design DNA, design identity, visual identity, UI reference, existing UI, approved design, design continuity, design synthesis, evolve design, reference synthesis, preserve design, legacy UI]"
+}

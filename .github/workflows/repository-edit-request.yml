@@ -37,7 +37,9 @@ jobs:
           fi
           request="${requests[0]}"
           [[ -f "$request" ]] || { echo "Request not found: $request" >&2; exit 2; }
+          target="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["path"])' "$request")"
           echo "request=$request" >> "$GITHUB_OUTPUT"
+          echo "target=$target" >> "$GITHUB_OUTPUT"
 
       - name: Apply deterministic edit
         run: python scripts/apply_repository_edit_request.py "${{ steps.request.outputs.request }}"
@@ -47,29 +49,57 @@ jobs:
           python scripts/validate_registry.py
           python scripts/check_evals.py
 
-      - name: Inspect and commit only intended target
+      - name: Remove disarded work files
+        shell: bash
+        run: rm -rf .repository-edit-work
+
+      - name: Check target diff whitespace
+        shell: bash
+        run: git diff --check
+
+      - name: Stage declared target
         shell: bash
         env:
-          REQUEST: ${{ steps.request.outputs.request }}
+          TARGET: ${{ steps.request.outputs.target }}
+        run: git add -- "$TARGET"
+
+      - name: Certify staged target
+        shell: bash
+        env:
+          TARGET: ${{ steps.request.outputs.target }}
         run: |
           set -euo pipefail
-          target="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["path"])' "$REQUEST")"
-          mapfile -t changed < <(git status --porcelain=v1 | sed -E 's/^...//')
-          for path in "${changed[@]}"; do
-            case "$path" in
-              "$target"|.repository-edit-work/*) ;;
-              *) echo "Unexpected changed path: $path" >&2; exit 2 ;;
-            esac
-          done
-          rm -rf .repository-edit-work
-          git diff --check
-          git diff -- "$target"
-          if git diff --quiet -- "$target"; then
-            echo "Request produced no target change" >&2
+          mapfile -t staged < <(git diff --cached --name-only --)
+          if [[ "${#staged[@]}" -ne 1 || "${staged[0]}" != "$TARGET" ]]; then
+            echo "Expected exactly one staged target change: $TARGET" >&2
+            printf 'Staged paths:\n' >&2
+            printf '  %s\n' "${staged[@]}" >&2
+            git status --porcelain=v1 >&2
             exit 2
           fi
+          if git diff --cached --quiet -- "$TARGET"; then
+            echo "Request produced no staged target change" >&2
+            exit 2
+          fi
+          git diff --cached --check
+          git diff --cached -- "$TARGET"
+
+      - name: Certify no residual tracked changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t remaining_tracked < <(git diff --name-only --)
+          if [[ "${sremaining_tracked[@]}" -ne 0 ]]; then
+            echo "Unexpected unstaged tracked changes remain after staging target" >&2
+            printf '  %s\n' "${remaining_tracked[@]}" >&2
+            exit 2
+          fi
+
+      - name: Commit and push
+        shell: bash
+        run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- "$target"
           git commit -m "Apply repository edit request"
           git push origin "HEAD:${GITHUB_REF_NAME}"

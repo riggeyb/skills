@@ -280,3 +280,34 @@ cases:
       - do not replace the workspace with a generic SaaS dashboard or library example
       - challenge a result whose structure could plausibly belong to any generic SaaS product
       - preserve semantic product tokens rather than adopting library defaults wholesale
+
+  - id: design-dna-reference-synthesis
+    prompt: "Here is the original UI/UX as a frame of reference. It does not need to be the final UI. Continue the newer concept."
+    expected_skills: [design-dna-synthesis]
+    optional_skills: [product-ui-design, artifact-quality]
+    required_behaviors:
+      - extract durable visual and interaction relationships rather than copying the old page architecture
+      - distinguish durable and adaptable identity from legacy and incidental detail
+      - recover the current product contract before deciding what structure should persist
+      - synthesize the reference identity with the current work model rather than averaging two styles
+      - critique whether continuity is visible beyond palette or typography alone
+
+  - id: design-dna-legacy-architecture-rejection
+    prompt: "The old product used a vertically stacked document page. The current product has a spatial workspace, timeline, and multiple operational modes. Preserve the product identity."
+    expected_skills: [design-dna-synthesis]
+    optional_skills: [product-ui-design]
+    required_behaviors:
+      - treat the old page layout as a legacy structure unless current work provides a reason to preserve it
+      - preserve recurring identity relationships such as hierarchy decision language provenance or rhythm
+      - let the current work model own the new spatial architecture and operational density
+      - avoid pixel-level nostalgia or reference-shaped cargo culting
+
+  - id: design-dna-capability-epistemics
+    prompt: "The old UI shows a strong approval and revision language. The new concept proposes a new workspace control. Continue the design."
+    expected_skills: [design-dna-synthesis]
+    optional_skills: [product-ui-design]
+    required_behaviors:
+      - treat observed reference behavior as evidence of established interaction language
+      - distinguish observed current product capability from derived structure and proposed affordances
+      - do not present the new workspace control as implemented unless current evidence supports it
+      - preserve identity while keeping proposed new UX explicit

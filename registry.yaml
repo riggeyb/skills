@@ -264,6 +264,19 @@ skills:
       - skills/design-mechanics/SKILL.md
     triggers: [design mechanics, design tokens, semantic color, color scale, interaction states, component primitives, ASIA, focus management, spacing, hierarchy, component composition, Tailwind theme, Radix]
 
+  - id: design-dna-synthesis
+    title: Design DNA Synthesis
+    repository: riggeyb/skills
+    category: ui-ux-design
+    mode: instruction
+    trust: first-party
+    update_policy: reviewed
+    last_reviewed: "2026-09-21"
+    ref: main
+    entrypoints:
+      - skills/design-dna-synthesis/SKILL.md
+    triggers: [design DNA, design identity, visual identity, UI reference, existing UI, approved design, design continuity, design synthesis, evolve design, reference synthesis, preserve design, legacy UI]
+
   - id: fast-llm-agent-mcp
     title: Fast LLM Agent MCP
     repository: omerbsezer/Fast-LLM-Agent-MCP
