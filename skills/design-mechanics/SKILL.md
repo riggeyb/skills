@@ -1,7 +1,7 @@
 ---
 name: design-mechanics
 description: First-party procedure for translating a grounded product design direction into coherent interaction primitives, semantic tokens, states, spacing, and component composition without homogenizing the product.
-version: "1.0.0"
+version: "1.0.1"
 trust: first-party
 ---
 
@@ -76,7 +76,7 @@ For each material interaction, specify:
 
 ## 6. Guard against homogenization
 
-Reference exposure can make a model more competent at a common visual grammar while making products less distinctive. Before handind back a design:
+Reference exposure can make a model more competent at a common visual grammar while making products less distinctive. Before handing back a design:
 - check that the primary spatial model came from the product workflow, not from the reference library;
 - check that tokens map to product semantics, not library defaults;
 - check that domain-specific controls retain first-class hierarchy;
@@ -89,7 +89,7 @@ Hand back to the domain specialist with:
 - the preserved product contract;
 - the semantic token roles;
 - the selected primitives and state contracts;
-- any upstream constraint that materially shaped the mechanic;
+- any upstream constraint that materially shaped the mechanics;
 - which choices remain product-specific proposals.
 
-Then use `ui-design-product` to reconcile mechanics with the overall product direction and `artifact-quality` to inspect the resulting artifact.
+Then use `product-ui-design` to reconcile mechanics with the overall product direction and `artifact-quality` to inspect the resulting artifact.
