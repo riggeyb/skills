@@ -1,7 +1,7 @@
 ---
 name: skill-routing
 description: First-party runtime control for selecting, composing, handing off, and evicting skills under bounded runtime budgets.
-version: "1.0.0"
+version: "1.1.0"
 trust: first-party
 ---
 
@@ -12,6 +12,24 @@ Use this runtime control when a task could match multiple skills, when an orches
 ## Objective
 
 Select the smallest sufficient set of trusted skills for the current material gate, keep the task's overall objective outside any one specialist, hand responsibility back when the specialist's gate is resolved, and evict skills that no longer justify their runtime cost.
+
+## Automatic capability discovery
+
+Before recommending a manual workflow, external builder, user-operated workaround, or a plan that assumes the runtime cannot act, determine whether available runtime capabilities would materially change the best approach.
+
+Treat capability discovery as a gate when the task is open-ended, consequential, multi-step, implementation-oriented, or likely to benefit from repository access, external evidence, artifact generation, verification, or mutation. Do not require the user to ask what tools or skills are available first.
+
+At this gate:
+1. inspect the capability manifest and current runtime tool surface;
+2. distinguish available, runtime-dependent, and unavailable capabilities;
+3. for runtime-dependent capabilities, rely on them only when a concrete current-session tool establishes the path;
+4. inspect the skill registry only far enough to identify procedures that could materially change the approach;
+5. prefer using safe available read-only capabilities to reduce uncertainty before asking the user for information they need not supply; and
+6. revise the plan when discovered capabilities make a more direct, autonomous, or verifiable workflow possible.
+
+Capability discovery is not permission to load every matching skill. After discovery, route by the current material gate and keep the smallest sufficient active set.
+
+Do not repeatedly rediscover stable capabilities within the same objective unless the runtime surface changes, a claimed capability fails, or a new gate depends on a capability whose status is not yet established.
 
 ## Routing state
 
@@ -40,7 +58,7 @@ Select the broader orchestrator when the user wants end-to-end execution. Select
 
 ## Compose sequentially before concurrently
 
-When several skills apply to different phases, prefer sequential handoffs over keeping all specialists active. For example, an implementation may use `change-analysis` to recover the edit countary, hand back to `implementation-execution` for mutation, then load `github-ci-evidence` only when remote certification becomes the live gate.
+When several skills apply to different phases, prefer sequential handoffs over keeping all specialists active. For example, an implementation may use `change-analysis` to recover the edit boundary, hand back to `implementation-execution` for mutation, then load `github-ci-evidence` only when remote certification becomes the live gate.
 
 Compose multiple skills simultaneously only when the current gate requires their distinct invariants at the same time. If two skills mainly restate the same control loop, keep the more specific one.
 
@@ -98,4 +116,4 @@ When two active skills disagree:
 
 ## Completion
 
-Good routing is not maximum skill usage. It is the minimum sufficient set of procedures that keeps the live objective moving, preserves trust and capability boundaries, and converges on direct eridence without exceeding runtime budgets.
+Good routing is not maximum skill usage. It is the minimum sufficient set of procedures that keeps the live objective moving, preserves trust and capability boundaries, and converges on direct evidence without exceeding runtime budgets.
