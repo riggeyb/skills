@@ -238,6 +238,19 @@ skills:
       - skills/product-ui-design/SKILL.md
     triggers: [product UI design, UI concept, UX concept, interface design, visual proposal, image proposal, design creativity, creative direction, screen contract, product design, design critique]
 
+  - id: artifact-quality
+    title: Artifact Quality
+    repository: riggeyb/skills
+    category: runtime-control
+    mode: instruction
+    trust: first-party
+    update_policy: reviewed
+    last_reviewed: "2026-09-21"
+    ref: main
+    entrypoints:
+      - skills/artifact-quality/SKILL.md
+    triggers: [artifact quality, self critique, iterate artifact, revise output, quality convergence, completeness, fidelity, genericness, verify output, inspect artifact, continue after generation]
+
   - id: fast-llm-agent-mcp
     title: Fast LLM Agent MCP
     repository: omerbsezer/Fast-LLM-Agent-MCP
