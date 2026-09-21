@@ -2,7 +2,7 @@
 
 Category: UI/UX implementation orchestration
 
-Version: 1.0.0
+Version: 1.0.1
 
 ## Objective
 
@@ -76,7 +76,7 @@ Each control or interaction should be classified before it is wired:
 - `PROPOSED`: the concept introduces a new product capability. Do not fake implementation. Either implement the product contract with proportionate scope or keep the affordance explicitly prototypal/disabled.
 - `UNKNOWN`: insufficient evidence. Inspect before coding.
 
-Never make a control appear operational when it has no homest behavior.
+Never make a control appear operational when it has no honest behavior.
 
 ## 5. Implement a minimal coherent slice
 
@@ -154,6 +154,6 @@ This skill does not replace specialists. Load the smallest sufficient set.
 - `change-analysis` owns codebase impact and behavior tracing.
 - `implementation-execution` owns the general repository mutation and verification lifecycle.
 - `frontend-verification` owns browser, responsive, console, and interaction evidence.
-- `artifact-quality` owns bounded critique → revise → enspect convergence.
+- `artifact-quality` owns bounded critique → revise → inspect convergence.
 
 When the user says `continue`, keep advancing the unresolved implementation objective through all safe and useful gates. Do not stop after merely creating files, compiling, or producing the first render.
