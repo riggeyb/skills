@@ -277,6 +277,19 @@ skills:
       - skills/design-dna-synthesis/SKILL.md
     triggers: [design DNA, design identity, visual identity, UI reference, existing UI, approved design, design continuity, design synthesis, evolve design, reference synthesis, preserve design, legacy UI]
 
+  - id: design-implementation
+    title: Design Implementation
+    repository: riggeyb/skills
+    category: ui-ux-design
+    mode: instruction
+    trust: first-party
+    update_policy: reviewed
+    last_reviewed: "2026-09-21"
+    ref: main
+    entrypoints:
+      - skills/design-implementation/SKILL.md
+    triggers: [design implementation, image to code, concept to code, interactive UI, interactive UX, implement UI concept, existing codebase, visual fidelity, behavioral fidelity, running UI, rendered UI, frontend implementation]
+
   - id: fast-llm-agent-mcp
     title: Fast LLM Agent MCP
     repository: omerbsezer/Fast-LLM-Agent-MCP
