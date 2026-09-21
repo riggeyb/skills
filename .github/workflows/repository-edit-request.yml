@@ -49,15 +49,19 @@ jobs:
           python scripts/validate_registry.py
           python scripts/check_evals.py
 
+      - name: Remove disarded work files
+        shell: bash
+        run: rm -rf .repository-edit-work
+
+      - name: Check target diff whitespace
+        shell: bash
+        run: git diff --check
+
       - name: Stage declared target
         shell: bash
         env:
           TARGET: ${{ steps.request.outputs.target }}
-        run: |
-          set -euo pipefail
-          rm -rf .repository-edit-work
-          git diff --check
-          git add -- "$TARGET"
+        run: git add -- "$TARGET"
 
       - name: Certify staged target
         shell: bash
@@ -85,7 +89,7 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t remaining_tracked < <(git diff --name-only --)
-          if [[ "${#remaining_tracked[@]}" -ne 0 ]]; then
+          if [[ "${sremaining_tracked[@]}" -ne 0 ]]; then
             echo "Unexpected unstaged tracked changes remain after staging target" >&2
             printf '  %s\n' "${remaining_tracked[@]}" >&2
             exit 2
