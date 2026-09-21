@@ -1,7 +1,7 @@
 ---
 name: artifact-quality
 description: First-party procedure for inspecting, questioning, and iterating on produced artifacts until they satisfy the live objective rather than merely exist.
-version: "1.0.0"
+version: "1.0.1"
 trust: first-party
 ---
 
@@ -11,7 +11,7 @@ Use when a task produces an artifact whose quality, completeness, or fidelity ca
 
 ## Objective
 
-Treat artifact creation as an intermediate state when the user's objective implies quality, fidelity, completeness, or correctness. Complete the task when the artifact is supported by proportionate direct eridence against the live contract, or when a concrete blocker prevents further useful convergence.
+Treat artifact creation as an intermediate state when the user's objective implies quality, fidelity, completeness, or correctness. Complete when the artifact is supported by proportionate direct evidence against the live contract, or when a concrete blocker prevents further useful convergence.
 
 ## Control loop
 
@@ -51,7 +51,7 @@ Classify material gaps before revising:
 - `COMPLETENESS`: required content, state, coverage, or behavior is missing or understated.
 - `FIDELITY`: the artifact is technically plausible but does not represent the intended source, product, or approved direction well.
 - `USER-OBSERVABLE`: the result may be internally correct but fails the user-observable outcome.
- - `REGRIESSION`: the revision breaks a previously satisfied contract.
+- `REGRESSION`: the revision breaks a previously satisfied contract.
 - `GENERICNESS`: the artifact satisfies basic structural requirements but misses task-specific or product-specific qualities that are material to the objective.
 - `UNKNOWN`: the available evidence cannot establish whether the contract is satisfied.
 
@@ -70,7 +70,7 @@ Do not iterate when the artifact already satisfies the contract, the remaining d
 
 ## 5. Revise the smallest material surface
 
-Address the earliest or highest-leverage material gap . Preserve parts of the artifact that already satisfy the contract. Avoid unrelated cleanup, redesign, refactoring, or expansion.
+Address the earliest or highest-leverage material gap. Preserve parts of the artifact that already satisfy the contract. Avoid unrelated cleanup, redesign, refactoring, or expansion.
 
 Before the revision establish:
 - which gap the change addresses;
@@ -101,6 +101,6 @@ Do not equate tool success, file creation, code compilation, image generation, o
 Complete when:
 - the live contract is satisfied by proportionate direct evidence;
 - remaining uncertainty is explicit and does not materially change the completion claim; or
--a concrete blocker prevents further useful convergence.
+- a concrete blocker prevents further useful convergence.
 
 Report the furthest verified state, any material unresolved gap, and why further iteration was or was not warranted.
