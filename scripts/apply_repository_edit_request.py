@@ -4,6 +4,7 @@
 Version 1 requests support byte-preserving insertion after a unique anchor.
 Version 2 adds exact unique replacement while retaining the same source
 precondition and repository-owned execution model.
+Version 3 adds exact file deletion with the same source preconditions.
 """
 from __future__ import annotations
 import argparse, hashlib, json, re
@@ -12,7 +13,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SHA256_RE = re.compile(r"[a-fA-F0-9]{64}")
 GIT_SHA_RE = re.compile(r"[a-fA-F0-9]{40}")
-SUPPORTED = {1: {"insert-after-unique"}, 2: {"insert-after-unique", "replace-unique"}}
+SUPPORTED = {
+    1: {"insert-after-unique"},
+    2: {"insert-after-unique", "replace-unique"},
+    3: {"insert-after-unique", "replace-unique", "delete-file"},
+}
 
 def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
@@ -63,10 +68,17 @@ def require_unique(source: bytes, needle: bytes, label: str) -> int:
         raise SystemExit(f"{label} must occur exactly once; found {count}")
     return source.index(needle)
 
-def apply(req: dict, source: bytes) -> tuple[bytes, dict[str, object]]:
+def apply(req: dict, source: bytes) -> tuple[bytes | None, dict[str, object]]:
     version, operation = req.get("version"), req.get("operation")
     if version not in SUPPORTED or operation not in SUPPORTED[version]:
         raise SystemExit(f"unsupported request version/operation: {version!r}/{operation!r}")
+    if operation == "delete-file":
+        metadata = {
+            "version": version, "operation": operation,
+            "source_sha256": sha256_bytes(source), "result_sha256": None,
+            "source_bytes": len(source), "result_bytes": 0,
+        }
+        return None, metadata
     if operation == "insert-after-unique":
         anchor = require_string(req, "anchor").encode()
         insertion = require_string(req, "insertion").encode()
@@ -98,7 +110,10 @@ def main() -> int:
     source = target.read_bytes()
     verify_source(req, source)
     result, metadata = apply(req, source)
-    target.write_bytes(result)
+    if result is None:
+        target.unlink()
+    else:
+        target.write_bytes(result)
     print(json.dumps(metadata, indent=2, sort_keys=True))
     return 0
 
