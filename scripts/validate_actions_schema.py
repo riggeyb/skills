@@ -26,6 +26,7 @@ REQUIRED_OPERATIONS = {
     "listWorkflowRunArtifacts": False,
     "getWorkflowRunArtifact": False,
     "downloadWorkflowRunArtifact": False,
+    "dispatchRepositoryWorkflow": True,
 }
 
 

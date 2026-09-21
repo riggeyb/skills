@@ -1,0 +1,1 @@
+{"version":2,"operation":"replace-unique","path":"scripts/validate_actions_schema.py","expected_source_git_blob_sha":"bd48573f1ad513efe8ed5190a02e429f6fab6de5","old":"    \"downloadWorkflowRunArtifact\": False,\n}","new":"    \"downloadWorkflowRunArtifact\": False,\n    \"dispatchRepositoryWorkflow\": True,\n}"}
