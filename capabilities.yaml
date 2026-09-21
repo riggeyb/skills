@@ -7,7 +7,7 @@ manifest:
     how to work; this file describes what the runtime is known to be able to observe or
     mutate. Capability declarations should track demonstrated tool surfaces, not historical
     integration names or behavior implied only by skill text.
-  last_reviewed: "2026-09-20"
+  last_reviewed: "2026-09-21"
 
 statuses:
   available: The capability is provided by a configured runtime integration and has been exercised successfully.
@@ -79,6 +79,7 @@ capabilities:
       - read workflow artifact metadata
     limitations:
       - artifact ZIP contents are not exposed by this capability
+      - workflow job log download is declared in the Action schema but has not been demonstrated as present in the conversational runtime
     guarantees:
       - workflow and job observations can be bound to an exact head SHA
       - artifact metadata is evidence about an artifact, not evidence of its uninspected contents
@@ -110,11 +111,15 @@ capabilities:
     scope:
       - riggeyb/skills repository
       - edit operations supported by scripts/apply_repository_edit_request.py
-    requires: 
-      - an exact source Git blob SHA precondition
+    operations:
+      - insert exact bytes after a unique anchor
+      - replace exact unique bytes with exact replacement bytes
+    requires:
+      - an exact source Git blob SHA or SHA-256 precondition
       - a deterministic edit request committed to .repository-edits/requests/
     guarantees:
       - source identity is checked before mutation
+      - unique-match operations reject missing or ambiguous targets
       - repository-owned workflow applies the requested deterministic transform
       - workflow validation can reject stale or invalid edits
       - a successful mutation creates a new commit SHA that must be reread and recertified

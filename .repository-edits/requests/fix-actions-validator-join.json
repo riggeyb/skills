@@ -1,0 +1,1 @@
+{"version":2,"operation":"replace-unique","path":"scripts/validate_actions_schema.py","expected_source_git_blob_sha":"579fa656d30ce95e9c557443b6494d2862127c71","old":"{'/'.ioin(path)}","new":"{'/'.join(path)}"}
