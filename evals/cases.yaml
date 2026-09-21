@@ -342,3 +342,42 @@ cases:
       - check responsive keyboard focus console and runtime evidence for the affected surface
       - classify material gaps and revise the smallest surface that resolves them
       - do not reuse prior certification after a mutation invalidates it
+
+  - id: reasoning-control-ambiguous-hypotheses
+    prompt: "A complex failure has two plausible causes and either would lead to a different fix. Investigate and continue."
+    expected_skills: [reasoning-control]
+    optional_skills: [tool-use-loop, debugging]
+    required_behaviors:
+      - classify the task as ambiguous rather than converging on the first plausible cause
+      - keep a small set of competing hypotheses when they materially change the next action
+      - choose evidence that discriminates between the hypotheses
+      - stop gathering redundant evidence once the next safe action is sufficiently supported
+
+  - id: reasoning-control-failure-replanning
+    prompt: "The last write failed with a conflict. Continue."
+    expected_skills: [reasoning-control]
+    optional_skills: [repository-engineering, tool-use-loop]
+    required_behaviors:
+      - treat the failure as evidence about the working model rather than blindly retrying
+      - classify stale identity or conflict before choosing the next action
+      - reread and recover the current source precondition
+      - replan the smallest justified action from the updated evidence
+
+  - id: reasoning-control-continuation-convergence
+    prompt: "The implementation is written and CI is still pending. Continue."
+    expected_skills: [reasoning-control]
+    optional_skills: [github-ci-evidence, implementation-execution]
+    required_behaviors:
+      - resume the unresolved objective rather than treating the previous tool call as completion
+      - preserve the pinned target identity while observing asynchronous evidence
+      - continue through safe useful gates within a finite observation budget
+      - distinguish pending unknown stale absent pass and fail evidence
+      - do not claim completion from an old green check or one pending observation
+
+  - id: reasoning-control-anti-overthinking
+    prompt: "Read this one small stable value and return it."
+    optional_skills: [reasoning-control]
+    required_behaviors:
+      - classify the task as simple when one bounded read is sufficient
+      - do not invent competing hypotheses or ceremonial gates that cannot change the outcome
+      - stop deliberating once the requested value is established
