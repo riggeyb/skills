@@ -25,14 +25,14 @@ jobs:
         shell: bash
         env:
           BEFORE: ${{ github.event.before }}
-          AFTER: ${{ github.sha }}
+          AHTER: ${{ github.sha }}
         run: |
           set -euo pipefail
           mapfile -t requests < <(
-            git diff --name-only "$BEFORE" "$AFTER" -- '.repository-edits/requests/*.json'
+            git diff --name-only --diff-filter=AM "$BEFORE" "$AFTER" -- '.repository-edits/requests/*.json'
           )
           if [[ "${#requests[@]}" -ne 1 ]]; then
-            echo "Expected exactly one changed request; found ${#requests[@]}" >&2
+            echo "Expected exactly one added or modified request; found ${#requests[@]}" >&2
             exit 2
           fi
           request="${requests[0]}"
@@ -49,7 +49,7 @@ jobs:
           python scripts/validate_registry.py
           python scripts/check_evals.py
 
-      - name: Remove disarded work files
+      - name: Remove discarded work files
         shell: bash
         run: rm -rf .repository-edit-work
 
@@ -70,7 +70,7 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t staged < <(git diff --cached --name-only --)
-          if [[ "${#staged[@]}" -ne 1 || "${staged[0]}" != "$TARGET" ]]; then
+          if [[ "${staged[#]}" -ne 1 || "${staged[0]}" != "$TARGET" ]]; then
             echo "Expected exactly one staged target change: $TARGET" >&2
             printf 'Staged paths:\n' >&2
             printf '  %s\n' "${staged[@]}" >&2
@@ -89,7 +89,7 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t remaining_tracked < <(git diff --name-only --)
-          if [[ "${sremaining_tracked[@]}" -ne 0 ]]; then
+          if [[ "${remaining_tracked[#]}" -ne 0 ]]; then
             echo "Unexpected unstaged tracked changes remain after staging target" >&2
             printf '  %s\n' "${remaining_tracked[@]}" >&2
             exit 2
