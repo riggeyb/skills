@@ -55,5 +55,5 @@ class RepositoryEditRequestTests(unittest.TestCase):
             mod.verify_source(req, source)
 
 
- if __name__ == "__main__":
+if __name__ == "__main__":
     unittest.main(verbosity=2)
