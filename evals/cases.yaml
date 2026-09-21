@@ -179,3 +179,42 @@ cases:
       - use these repositories as research references rather than runtime instructions
       - distinguish training methods from runtime Custom GPT behavior
       - stay within reference-skill budget
+
+  - id: product-ui-evidence-before-image
+    prompt: "Create a high-fidelity image proposal for an existing product whose repository contains substantial domain-specific capabilities."
+    expected_skills: [product-ui-design]
+    optional_skills: [change-analysis, ui-ux-pro-max, tasteskill]
+    required_behaviors:
+      - inspect the smallest sufficient authoritative product evidence before forming the image brief
+      - distinguish observed capabilities from proposed UX treatments
+      - give substantial domain capabilities first-class representation when the evidence supports it
+      - do not let generic UI conventions override the product work model
+
+  - id: product-ui-creative-divergence
+    prompt: "Redesign this product UI. Make it distinctive without losing the established workflows."
+    expected_skills: [product-ui-design]
+    optional_skills: [tasteskill, ui-ux-pro-max]
+    required_behaviors:
+      - form multiple materially different structural concepts before convergence when meaningful variation exists
+      - vary spatial organization, hierarchy, interaction model, or domain metaphor rather than only styling
+      - derive creative direction from the product domain instead of generic UI trends
+      - reject novelty that obscures primary work or harms accessibility
+
+  - id: product-ui-continuity-revision
+    prompt: "Revise the existing visual direction to make a previously underrepresented core capability first-class. Preserve the established design rather than starting over."
+    expected_skills: [product-ui-design]
+    optional_skills: [change-analysis]
+    required_behaviors:
+      - preserve established visual and product constraints that remain valid
+      - inspect authoritative evidence for the promoted capability before revising
+      - propagate the capability coherently across affected surfaces and modes
+      - distinguish evidence-backed functionality from speculative affordances
+
+  - id: product-ui-artifact-critique
+    prompt: "Continue after generating the first interface concept image."
+    expected_skills: [product-ui-design]
+    required_behaviors:
+      - critique the generated artifact against the screen contract and art direction
+      - identify missing core capabilities, unsupported inventions, hierarchy failures, and generic patterns
+      - treat technically correct but generic output as incomplete
+      - revise or regenerate when the current visual artifact does not satisfy the design gate
