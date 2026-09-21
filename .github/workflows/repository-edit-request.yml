@@ -25,7 +25,7 @@ jobs:
         shell: bash
         env:
           BEFORE: ${{ github.event.before }}
-          AHTER: ${{ github.sha }}
+          AFTER: ${{ github.sha }}
         run: |
           set -euo pipefail
           mapfile -t requests < <(
@@ -63,6 +63,17 @@ jobs:
           TARGET: ${{ steps.request.outputs.target }}
         run: git add -- "$TARGET"
 
+      - name: Certify no residual tracked changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t remaining_tracked < <(git diff --name-only --)
+          if [[ "${#remaining_tracked[@]}" -ne 0 ]]; then
+            echo "Unexpected unstaged tracked changes remain after staging target" >&2
+            printf '  %s\n' "${remaining_tracked[@]}" >&2
+            exit 2
+          fi
+
       - name: Certify staged target
         shell: bash
         env:
@@ -70,7 +81,7 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t staged < <(git diff --cached --name-only --)
-          if [[ "${staged[#]}" -ne 1 || "${staged[0]}" != "$TARGET" ]]; then
+          if [[ "${#staged[@]}" -ne 1 || "${staged[0]}" != "$TARGET" ]]; then
             echo "Expected exactly one staged target change: $TARGET" >&2
             printf 'Staged paths:\n' >&2
             printf '  %s\n' "${staged[@]}" >&2
@@ -83,17 +94,6 @@ jobs:
           fi
           git diff --cached --check
           git diff --cached -- "$TARGET"
-
-      - name: Certify no residual tracked changes
-        shell: bash
-        run: |
-          set -euo pipefail
-          mapfile -t remaining_tracked < <(git diff --name-only --)
-          if [[ "${remaining_tracked[#]}" -ne 0 ]]; then
-            echo "Unexpected unstaged tracked changes remain after staging target" >&2
-            printf '  %s\n' "${remaining_tracked[@]}" >&2
-            exit 2
-          fi
 
       - name: Commit and push
         shell: bash
