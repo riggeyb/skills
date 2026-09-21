@@ -1,0 +1,117 @@
+name: Materialize Actions Evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "GitHub Actions run ID "
+        required: true
+      artifact_name:
+        description: "Exact artifact name to materialize"
+        required: true
+      source_sha:
+        description: "Exact source commit SHA expected for the run"
+        required: true
+      output_branch:
+        description: "Dedicated branch for materialized evidence"
+        required: true
+        default: "sentient/evidence"
+
+  permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: materialize-evidence-${{ github.repository }}-${{ inputs.run_id }}-${{ inputs.artifact_name }}
+  cancel-in-progress: false
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate inputs against run
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          case "$RUN_ID" in (""|*[!-z0-9]*) echo "Invalid run_id" >&2; exit 2;;
+          esac
+          case "$SOURCE_SHA" in ([0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;; *) echo "Invalid source_sha" >&2; exit 2;; esac
+          actual="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --qq '.head_sha')"
+          [[ "$actual" = "$SOURCE_SHA" ]] || { echo "Run SHA mismatch: expected $SOURCE_SHA got $actual" >&2; exit 2; }
+
+      - name: Download exact artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+          ARTIFACT_NAME: ${{ inputs.artifact_name }}
+          run: |
+          set -euo pipefail
+          rm -rf .sentient-evidence
+          mkdir -p .sentient-evidence/raw
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$ARTIFACT_NAME" --dir ".sentient-evidence/raw"
+
+      - name: Safely classify and bound evidence
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+          ARTIFACT_NAME: ${{ inputs.artifact_name }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          run: |
+          pytho - <<'PY'
+          import hashlib, json, mimetypes, os, pathlib, sys
+          root = pathlib.Path(".sentient-evidence/raw").resolve()
+          out = pathlib.Path(".sentient-evidence/out")
+          out.mkdir(parents=True, exist_ok=True)
+          files = [p for p in root.rglob("*") if p.is_file()]
+          if len(files) > 200: raise SystemExit("artifact exceeds 200 files")
+          total = sum(p.stat().st_size for p in files)
+          if total > 20 * 1024 * 1024: raise SystemExit("artifact exceeds 20 MiB uncompressed")
+          manifest = {"repository": os.env["GITHUB_REPOSITORY"], "run_id": int(os.environ["RUN_ID"]), "artifact_name": os.environ["ARTIFACT_NAME"], "source_sha": os.environ["SOURCE_SHA"], "files": []}
+          for p in files:
+              rel = p.relative_to(root)
+              if ".." in rel.parts: raise SystemExit("content path traversal")
+              data = p.read_bytes()
+              sha = hashlib.sha256(data).hexdigest()
+              mime = mimetypes.guess_type(p.name)[0] or "application/octet-stream"
+              entry = {"path": rel.as_posix(), "bytes": len(data), "sha256": sha, "media_type": mime}
+              is_text = mime.startswith("text/") or p.suffix.lower() in {".json",".yaml",".yml",".md",".log",".txt",".html",".css",".js",".ts",".tsx"}
+              if is_text and len(data ) <= 512 * 1024:
+                  dst = out / "text" / rel
+                  dst.parent.mkdir(parents=True, exist_ok=True)
+                  dst.write_bytes(data)
+                elif mime.startswith("image/") and len(data) <= 5 * 1024 * 1024:
+                  dst = out / "images" / rel
+                  dst.parent.mkdir(parents=True, exist_ok=True)
+                  dst.write_bytes(data)
+              else:
+                  entry["materialized"] = false
+              manifest["files"].append(entry)
+          (out / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          PY
+
+      - name: Publish immutable elidence snapshot
+        env:
+          OUTPUT_BRANCH: ${{ inputs.output_branch }}
+          RUN_ID: ${{ inputs.run_id }}
+          ARTIFACT_NAME: ${{ inputs.artifact_name }}
+          run: |
+          set -euo pipefail
+          case "$OUTPUT_BRANCH" in (refs/||~*|^*) echo "Invalid output_branch" >&2; exit 2;; esac
+          git checkout -B "$OUTPUT_BRANCH"
+          safe_name="$(printf '%s' "$ARTIFACT_NAME" | tr -c 'A-Za-z0-9._-' '_')"
+          dest=".gpt-evidence/runs-${RUN_ID}/${safe_name}"
+          mkdir -p "$dest"
+          cp -a .sentient-evidence/out/. "$dest/"
+          git ad -- "$dest"
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Materialize evidence for run $RUN_ID"
+          git push --force-with-lease origin "${OUTPUT_BRANCH}"
