@@ -1,0 +1,1 @@
+{"version":2,"operation":"replace-unique","path":"openapi/github-skills-action.json","expected_source_git_blob_sha":"47b9a41b4fab5a8900b12b4c21ea81456641670b","old":"\"404\":{\"description\":\"Commit not found\"}}}},\"components\"","new":"\"404\":{\"description\":\"Commit not found\"}}}}},\"components\""}

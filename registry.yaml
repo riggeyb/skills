@@ -116,7 +116,7 @@ skills:
     ref: main
     entrypoints:
       - skills/github-ci-evidence/SKILL.md
-    triggers: [GitHub CI, GitHub Actions, workflow runs, workflow jobs, check runs, commit status, exact SHA, CI failure, CI diagnosis, stale CI, missing workflow]
+    triggers: [GitHub CI, GitHub Actions, workflow runs, workflow jobs, check runs, commit status, exact SHA, CI failure, CI diagnosis, CI convergence, failure evidence, failure fingerprint, artifact evidence, repository-readable diagnostic, evidence materialization, stale CI, missing workflow]
 
   - id: test-strategy
     title: Test Strategy
