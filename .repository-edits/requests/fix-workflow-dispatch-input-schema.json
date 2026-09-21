@@ -1,0 +1,1 @@
+{"version":2,"operation":"replace-unique","path":"openapi/github-skills-action.json","expected_source_git_blob_sha":"32e1ef68a0c34780016156776e44af8f817081ca","old":"\"inputs\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"string\"}}","new":"\"inputs\":{\"type\":\"object\",\"properties\":{},\"additionalProperties\":{\"type\":\"string\"}}"}
