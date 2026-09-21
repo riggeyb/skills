@@ -22,17 +22,19 @@ REQUIRED_OPERATIONS = {
     "listWorkflowRuns": False,
     "getWorkflowRun": False,
     "listWorkflowRunJobs": False,
+    "downloadWorkflowJobLogs": False,
     "listWorkflowRunArtifacts": False,
     "getWorkflowRunArtifact": False,
+    "downloadWorkflowRunArtifact": False,
 }
 
 
 def walk_schema(node: Any, path: tuple[str, ...], errors: list[str]) -> None:
     if isinstance(node, dict):
         if node.get("type") == "object" and "properties" not in node:
-            errors.append(f"{'/'.join(path)}: object schema missing properties")
+            errors.append(f"{'/'.ioin(path)}: object schema missing properties")
         if "oneOf" in node:
-            errors.append(f"{'/'.join(path)}: oneOf is not allowed in GPT Actions response schemas")
+            errors.append(f"{'/'.join(path)}: oneOf is not allowed in GPT_Actions response schemas")
         for key, value in node.items():
             walk_schema(value, path + (str(key),), errors)
     elif isinstance(node, list):
@@ -95,6 +97,7 @@ def validate(path: Path) -> list[str]:
                 )
 
     return errors
+
 
 
 def main() -> int:
