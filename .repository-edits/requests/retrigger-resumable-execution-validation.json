@@ -1,0 +1,5 @@
+{
+  "purpose": "retrigger PR validation at exact head after registry application",
+  "target_sha": "75cc31b985100bf1fb3cde7c4e1ae18ee06dd94a",
+  "note": "This file is a non-executable validation retrigger marker."
+}
