@@ -54,13 +54,14 @@ jobs:
         run: |
           set -euo pipefail
           target="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["path"])' "$REQUEST")"
-          mapfile -t changed < <(git status --porcelain=v1 | sed -E 's/^...//')
-          for path in "${changed[@]}"; do
-            case "$path" in
-              "$target"|.repository-edit-work/*) ;;
-              *) echo "Unexpected changed path: $path" >&2; exit 2 ;;
-            esac
-          done
+          mapfile -t changed < <(git diff --name-only --)
+          if [[ "${#changed[@]}" -ne 1 || "${changed[0]}" != "$target" ]]; then
+            echo "Expected exactly one tracked target change: $target" >&2
+            printf 'Tracked changed paths:\n' >&2
+            printf '  %s\n' "${changed[@]}" >&2
+            git status --porcelain=v1 >&2
+            exit 2
+          fi
           rm -rf .repository-edit-work
           git diff --check
           git diff -- "$target"
