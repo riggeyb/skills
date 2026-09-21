@@ -64,7 +64,7 @@ Keep screenshots as artifacts; make the actionable diagnosis text-readable witho
 ## Failure fingerprinting
 
 Compare each failure with the previous diagnostic:
-- changed fingerprnt after targeted repair: the test advanced; diagnose the new failure;
+- changed fingerprint after targeted repair: the test advanced; diagnose the new failure;
 - identical fingerprint: verify the repair reached the tested SHA and affects the asserted contract before another mutation;
 - ambiguous fingerprint: gather the smallest discriminating evidence.
 
