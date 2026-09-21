@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "operation": "insert-after-unique",
+  "path": "registry.yaml",
+  "expected_source_git_blob_sha": "92931e68b635ec8457cfc53c82dbae7c37d0f085",
+  "anchor": "  - id: repo-agent\n    title: RepoAgent\n    repository: OpenBMB/RepoAgent\n    category: coding-agents\n    mode: reference\n    entrypoints: [README.md]\n    triggers: [repository understanding, code documentation, repo analysis]",
+  "insertion": "\n\n  - id: product-ui-design\n    title: Product UI Design\n    repository: riggeyb/skills\n    category: ui-ux-design\n    mode: instruction\n    trust: first-party\n    update_policy: reviewed\n    last_reviewed: \"2026-09-20\"\n    ref: main\n    entrypoints:\n      - skills/product-ui-design/SKILL.md\n    triggers: [product UI design, UI concept, UX concept, interface design, visual proposal, image proposal, design creativity, creative direction, screen contract, product design, design critique]"
+}
