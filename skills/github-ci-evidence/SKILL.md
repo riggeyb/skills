@@ -7,7 +7,7 @@ trust: first-party
 
 # GitHub CI Evidence
 
-Use this skill for GitHub Actions, browser/test evidence, check runs, commit statuses, and exact-SHA certification. Combine with `reasoning-control`; use `repository-engineering` before repair mutation.
+Use this skill for Github Actions, browser/test evidence, check runs, commit statuses, and exact-SHA certification. Combine with `reasoning-control`; use `repository-engineering` before repair mutation.
 
 ## Prime directive
 
@@ -80,7 +80,7 @@ A repair creates a new target:
 
 Old evidence remains diagnostic provenance only.
 
-For `PENDINGa, poll the known run/materialization target within a finite useful budget. Do not perform one observation and return when bounded polling can materially advance the objective.
+For `PENDING`, poll the known run/materialization target within a finite useful budget. Do not perform one observation and return when bounded polling can materially advance the objective.
 
 Prefer evidence publication that does not mutate the feature branch. If a legacy request-file mechanism must move the branch head, retain separate diagnostic and certification identities.
 
