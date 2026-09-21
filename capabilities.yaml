@@ -84,6 +84,34 @@ capabilities:
       - workflow and job observations can be bound to an exact head SHA
       - artifact metadata is evidence about an artifact, not evidence of its uninspected contents
 
+  github_workflow_dispatch:
+    status: runtime_dependent
+    provider: github-skills-action
+    mutating: true
+    operations:
+      - dispatch workflow_dispatch for an explicit workflow file or ID, ref, and string-valued inputs
+    guarantees:
+      - dispatch acceptance is distinct from workflow execution success
+      - callers must observe the resulting workflow run before claiming execution
+    note: >-
+      The Action schema declares dispatchRepositoryWorkflow, but availability must be demonstrated after the
+      updated schema is loaded into the conversational runtime.
+
+  github_evidence_materialization:
+    status: runtime_dependent
+    provider: repository-owned-github-actions-workflow
+    mutating: true
+    requires:
+      - workflow dispatch capability in the current runtime
+      - target repository installation of the materialization workflow
+      - GitHub Actions read access and contents write access in the target repository
+    guarantees:
+      - binds requested evidence to an exact source workflow run SHA
+      - materializes bounded text and image evidence plus a provenance manifest onto a dedicated evidence branch
+      - does not treat artifact metadata as artifact-content evidence
+    limitations:
+      - unavailable until the target repository installs the workflow and a dispatch completes successfully
+
   github_commit_evidence_read:
     status: available
     provider: github-skills-action
