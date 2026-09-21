@@ -108,6 +108,7 @@ def main() -> int:
     if errors:
         for error in errors:
             print(f"ERROR: {error}")
+            print(f"::error title=GPT Actions schema compatibility::{error}")
         print(f"\nGPT Actions schema compatibility check failed with {len(errors)} error(s).")
         return 1
     print("GPT Actions schema compatibility check passed.")
