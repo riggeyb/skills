@@ -61,7 +61,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout4v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -136,7 +136,7 @@ jobs:
               "test_identity": fields["test_identity"] or None,
               "failure_fingerprint": fingerprint,
               "evidence_artifact": fields["evidence_artifact"] or None,
-              "screenshot_sha2556": screenshot_hash or None,
+              "screenshot_sha256": screenshot_hash or None,
           }
           encoded = (json.dumps(diagnostic, indent=2, sort_keys=True) + "\n").encode()
           if len(encoded) > 16 * 1024:
