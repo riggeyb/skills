@@ -61,7 +61,7 @@ jobs:
         shell: bash
         env:
           TARGET: ${{ steps.request.outputs.target }}
-        run: git add -- "$TARGET"
+        run: git add -A -- "$TARGET"
 
       - name: Certify no residual tracked changes
         shell: bash
