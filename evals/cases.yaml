@@ -218,3 +218,34 @@ cases:
       - identify missing core capabilities, unsupported inventions, hierarchy failures, and generic patterns
       - treat technically correct but generic output as incomplete
       - revise or regenerate when the current visual artifact does not satisfy the design gate
+
+
+  - id: artifact-quality-generation-is-not-completion
+    prompt: "Create the artifact and keep going until it is actually good enough for the stated objective."
+    expected_skills: [artifact-quality]
+    required_behaviors:
+      - recover the live completion contract before judging the artifact
+      - inspect the produced artifact through an available concrete observation path
+      - do not equate successful generation or mutation with objective completion
+      - classify material gaps before deciding whether another iteration is warranted
+      - report unobserved quality as uncertain rather than pretending it was inspected
+
+  - id: artifact-quality-bounded-iteration
+    prompt: "Continue improving the generated artifact."
+    expected_skills: [artifact-quality]
+    required_behaviors:
+      - preserve still-valid constraints and already-satisfied parts of the artifact
+      - iterate only when a material gap and a concrete improvement hypothesis exist
+      - revise the smallest material surface rather than restarting reflexively
+      - reinspect evidence affected by the revision
+      - stop when further changes would be subjective churn or speculative expansion
+
+  - id: artifact-quality-domain-handoff
+    prompt: "The UI concept image exists. Continue."
+    expected_skills: [artifact-quality]
+    optional_skills: [product-ui-design]
+    required_behaviors:
+      - use the domain specialist to define what counts as a good design artifact
+      - use artifact-quality to govern inspect classify revise and reinspect convergence
+      - preserve the distinction between observed product capability and proposed UX
+      - do not load unrelated specialists merely because they could be useful
