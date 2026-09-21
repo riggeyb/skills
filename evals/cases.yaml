@@ -311,3 +311,34 @@ cases:
       - distinguish observed current product capability from derived structure and proposed affordances
       - do not present the new workspace control as implemented unless current evidence supports it
       - preserve identity while keeping proposed new UX explicit
+  - id: design-implementation-existing-codebase
+    prompt: "Implement this approved UI concept inside the existing app. Make it interactive and keep going until it is verified."
+    expected_skills: [design-implementation]
+    optional_skills: [change-analysis, implementation-execution, frontend-verification]
+    required_behaviors:
+      - recover the existing codebase ownership and state contracts before editing
+      - map material design regions and behaviors to existing or justified new code
+      - prefer a minimal coherent slice inside the real app over a detached prototype
+      - run and observe the strongest available build test render and interaction evidence
+      - continue through critique revision and reverification rather than stopping at the first render
+
+  - id: design-implementation-no-fake-interactivity
+    prompt: "The concept includes a new workspace control, but the current product has no such capability. Implement the rest of the concept in the existing codebase."
+    expected_skills: [design-implementation]
+    optional_skills: [product-ui-design, design-dna-synthesis]
+    required_behaviors:
+      - classify the new control as proposed rather than existing capability
+      - do not make the control appear operational without an honest product behavior
+      - wire observed capabilities to real product state
+      - keep the proposed affordance explicitly prototypal disabled or implement its product contract with proportionate scope
+
+  - id: design-implementation-render-verification
+    prompt: "The UI compiles and the first render looks close to the concept. Continue."
+    expected_skills: [design-implementation]
+    optional_skills: [frontend-verification, artifact-quality]
+    required_behaviors:
+      - treat compilation and first render as intermediate evidence rather than completion
+      - exercise material interactions and state transitions when the runtime provides direct observation
+      - check responsive keyboard focus console and runtime evidence for the affected surface
+      - classify material gaps and revise the smallest surface that resolves them
+      - do not reuse prior certification after a mutation invalidates it
