@@ -1,0 +1,12 @@
+version: 1
+library:
+  name: sentient-standard-library
+  repository: riggeyb/skills
+  policy: skills/standard-library/SKILL.md
+modules:
+  - id: async.poll-until-terminal
+    version: 1.0.0
+    class: function
+    language: typescript
+    tags: [async, polling, retry, abort-signal]
+    path: code-library/typescript/async/poll-until-terminal
