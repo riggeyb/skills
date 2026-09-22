@@ -7,7 +7,7 @@ manifest:
     how to work; this file describes what the runtime is known to be able to observe or
     mutate. Capability declarations should track demonstrated tool surfaces, not historical
     integration names or behavior implied only by skill text.
-  last_reviewed: "2026-09-21"
+  last_reviewed: "2026-09-22"
 
 statuses:
   available: The capability is provided by a configured runtime integration and has been exercised successfully.
@@ -83,6 +83,25 @@ capabilities:
     guarantees:
       - workflow and job observations can be bound to an exact head SHA
       - artifact metadata is evidence about an artifact, not evidence of its uninspected contents
+
+  github_copilot_delegation:
+    status: runtime_dependent
+    provider: github-skills-action
+    mutating: true
+    operations:
+      - create an issue and assign copilot-swe-agent[bot] with bounded agent_assignment fields
+      - add Copilot as an assignee to an existing issue
+      - read delegated issue state and issue timeline events
+      - create issue or pull request comments for bounded @copilot revisions
+    guarantees:
+      - issue assignment acceptance is control-plane evidence, not implementation correctness
+      - Copilot worker output must be independently inspected and verified at the exact resulting SHA
+    limitations:
+      - requires the updated GitHub Skills Action schema to be loaded into the current GPT runtime
+      - Copilot Pro uses issue assignment; the direct Agent Tasks start endpoint is not a Pro capability
+    note: >-
+      Treat this capability as unavailable in a session that does not expose the concrete issue
+      operations even when this manifest declares the intended schema surface.
 
   github_workflow_dispatch:
     status: runtime_dependent
