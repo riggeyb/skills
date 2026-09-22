@@ -47,32 +47,33 @@ def has_bearer_requirement(security: object) -> bool:
     return False
 
 
-def validate() -> list[str]:
+def validate(schema_path: Path | None = None) -> list[str]:
     errors: list[str] = []
+    schema_path = schema_path or SCHEMA
     try:
-        doc = json.loads(SCHEMA.read_text(encoding="utf-8"))
+        doc = json.loads(schema_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        return [f"{SCHEMA}: {exc}"]
+        return [f"{schema_path}: {exc}"]
 
     if not isinstance(doc.get("openapi"), str) or not str(doc["openapi"]).startswith("3."):
-        errors.append(f"{SCHEMA}: openapi must be a 3.x version string")
+        errors.append(f"{schema_path}: openapi must be a 3.x version string")
 
     if doc.get("servers") != [{"url": EXPECTED_SERVER}]:
-        errors.append(f"{SCHEMA}: server must be exactly {EXPECTED_SERVER}")
+        errors.append(f"{schema_path}: server must be exactly {EXPECTED_SERVER}")
 
     components = doc.get("components")
     schemes = components.get("securitySchemes") if isinstance(components, dict) else None
     bearer = schemes.get("bearerAuth") if isinstance(schemes, dict) else None
     if bearer != {"type": "http", "scheme": "bearer"}:
-        errors.append(f"{SCHEMA}: components.securitySchemes.bearerAuth must be http bearer")
+        errors.append(f"{schema_path}: components.securitySchemes.bearerAuth must be http bearer")
 
     global_security = doc.get("security")
     if not has_bearer_requirement(global_security):
-        errors.append(f"{SCHEMA}: top-level security must include bearerAuth")
+        errors.append(f"{schema_path}: top-level security must include bearerAuth")
 
     paths = doc.get("paths")
     if not isinstance(paths, dict):
-        return [f"{SCHEMA}: paths must be an object"]
+        return [f"{schema_path}: paths must be an object"]
 
     seen: set[str] = set()
     operations_by_id: dict[str, dict] = {}
@@ -108,9 +109,9 @@ def validate() -> list[str]:
     missing = REQUIRED_OPERATION_IDS - seen
     unexpected = seen - REQUIRED_OPERATION_IDS
     for op_id in sorted(missing):
-        errors.append(f"{SCHEMA}: required operation {op_id!r} is missing")
+        errors.append(f"{schema_path}: required operation {op_id!r} is missing")
     for op_id in sorted(unexpected):
-        errors.append(f"{SCHEMA}: unexpected operation {op_id!r}; only the four bounded read operations are allowed")
+        errors.append(f"{schema_path}: unexpected operation {op_id!r}; only the four bounded read operations are allowed")
 
     sites_op = operations_by_id.get("listNetlifySites", {})
     sites_schema = (
@@ -128,7 +129,7 @@ def validate() -> list[str]:
     build_settings_props = build_settings.get("properties", {}) if isinstance(build_settings, dict) else {}
     for required_prop in ("repo_path", "repo_url"):
         if required_prop not in build_settings_props:
-            errors.append(f"{SCHEMA}: listNetlifySites response must include build_settings.{required_prop}")
+            errors.append(f"{schema_path}: listNetlifySites response must include build_settings.{required_prop}")
 
     deploy_schema = (
         doc.get("components", {})
@@ -139,11 +140,11 @@ def validate() -> list[str]:
     deploy_props = deploy_schema.get("properties", {}) if isinstance(deploy_schema, dict) else {}
     for required_prop in ("id", "site_id", "build_id", "state", "commit_ref", "error_message"):
         if required_prop not in deploy_props:
-            errors.append(f"{SCHEMA}: Deploy schema must include {required_prop}")
+            errors.append(f"{schema_path}: Deploy schema must include {required_prop}")
     deploy_required = deploy_schema.get("required", []) if isinstance(deploy_schema, dict) else []
     for required_prop in ("id", "site_id", "state"):
         if required_prop not in deploy_required:
-            errors.append(f"{SCHEMA}: Deploy schema must require {required_prop}")
+            errors.append(f"{schema_path}: Deploy schema must require {required_prop}")
 
     build_op = operations_by_id.get("getNetlifySiteBuild", {})
     build_schema = (
@@ -157,11 +158,11 @@ def validate() -> list[str]:
     build_props = build_schema.get("properties", {}) if isinstance(build_schema, dict) else {}
     for required_prop in ("id", "deploy_id", "sha", "done", "error", "created_at"):
         if required_prop not in build_props:
-            errors.append(f"{SCHEMA}: getNetlifySiteBuild response must include {required_prop}")
+            errors.append(f"{schema_path}: getNetlifySiteBuild response must include {required_prop}")
     build_required = build_schema.get("required", []) if isinstance(build_schema, dict) else []
     for required_prop in ("id", "deploy_id", "sha", "done"):
         if required_prop not in build_required:
-            errors.append(f"{SCHEMA}: getNetlifySiteBuild response must require {required_prop}")
+            errors.append(f"{schema_path}: getNetlifySiteBuild response must require {required_prop}")
 
     return errors
 

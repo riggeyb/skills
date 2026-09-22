@@ -34,12 +34,7 @@ class NetlifyActionsSchemaValidationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "schema.json"
             path.write_text(json.dumps(schema), encoding="utf-8")
-            original = mod.SCHEMA
-            mod.SCHEMA = path
-            try:
-                errors = mod.validate()
-            finally:
-                mod.SCHEMA = original
+            errors = mod.validate(path)
         self.assertTrue(any("must require sha" in error for error in errors), errors)
 
     def test_resolve_local_ref_follows_component_paths(self) -> None:

@@ -323,10 +323,16 @@
             "type": "string"
           },
           "commit_ref": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "error_message": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "created_at": {
             "type": "string",
