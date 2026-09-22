@@ -98,7 +98,7 @@ capabilities:
       - stale deploy/build evidence for a different SHA must be treated as non-certifying
       - capability scope is bounded to read-only deployment/build evidence operations
     limitations:
-      - requires runtime exposure of the Netlify evidence action with OAuth2/******
+      - requires runtime exposure of the Netlify evidence action with configured Bearer authentication (Netlify personal access token)
       - availability is runtime dependent; the skill text does not create this capability
 
   github_copilot_delegation:
