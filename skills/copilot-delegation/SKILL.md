@@ -1,7 +1,7 @@
 ---
 name: copilot-delegation
-description: First-party policy for delegating bounded implementation work to GitHub Copilot cloud agent while Sentient retains inspection, verification, and acceptance authority.
-version: "1.0.0"
+description: First-party policy for delegating bounded implementation work to GitHub Copilot cloud agent while Sentient retains inspection, verification, acceptance authority, and AI-credit discipline.
+version: "1.1.0"
 trust: first-party
 ---
 
@@ -35,7 +35,24 @@ Prefer delegation when the objective is bounded and testable, the likely diff is
 
 Prefer direct implementation for tiny changes, highly interactive work, unresolved architecture, changes requiring continuous sensitive judgment, unavailable worker context, or likely repeated micro-corrections.
 
-Do not delegate merely because Copilot is available.
+Do not delegate merely because Copilot is available. Do not use Copilot for trivial edits that Sentient can safely complete with deterministic repository primitives.
+
+## AI-credit budget defaults
+
+Treat Copilot usage as a limited paid execution resource.
+
+Unless the task explicitly justifies a larger budget, use these defaults:
+- at most one initial Copilot assignment for a bounded objective;
+- at most one bundled `@copilot` correction pass after independent inspection;
+- after one failed correction pass, stop worker iteration and either repair directly, repartition the task, or report the concrete blocker;
+- never create a second task to poll, remind, restart, or duplicate an existing live task;
+- never delegate a change whose expected review/correction overhead is comparable to or greater than implementing it directly;
+- prefer direct repository edits for tiny mechanical fixes discovered during review;
+- do not delegate policy-only or metadata-only edits merely to exercise the worker.
+
+A larger credit budget requires an explicit operational justification recorded before dispatch: why additional worker cycles are cheaper or safer than direct implementation, what the hard maximum is, and what condition terminates delegation.
+
+Do not hard-code account-wide monthly quotas in task policy because plan allowances and model multipliers can change. Use the current observed account budget, if available, only as an additional constraint.
 
 ## Bound the objective
 
@@ -104,7 +121,7 @@ For GitHub evidence use `github-ci-evidence`: bind PR, workflow/check/status evi
 
 When inspection or verification finds a bounded defect:
 1. diagnose from authoritative evidence;
-2. consolidate the observed gap and acceptance condition into one correction request;
+2. consolidate all known worker-correctable gaps and acceptance conditions into one correction request;
 3. comment on the worker PR with `@copilot` and that bounded correction;
 4. avoid piecemeal comments that create unnecessary sessions/credits;
 5. observe the new worker commit;
@@ -113,13 +130,19 @@ When inspection or verification finds a bounded defect:
 
 Prefer a direct small repair when it is cheaper and safer than another delegation cycle and does not violate the concurrency plan.
 
-Set a finite revision budget. If repeated Copilot revisions do not converge, stop redelegating and implement directly or report the concrete blocker. Never use new tasks as a polling mechanism.
+The default revision budget is one Copilot correction pass. If that correction does not converge, stop redelegating unless a larger budget was explicitly justified before the additional cycle. Never use new tasks as a polling mechanism.
 
 ## Concurrency and credit control
 
 Keep one active editor per target branch unless an explicit plan partitions files/ownership, integration order, and conflict handling. Never run overlapping agents against the same target implicitly.
 
-Treat every new assignment and `@copilot` correction as potentially consuming AI credits. Reuse live work, batch corrections, and avoid duplicate tasks.
+Treat every new assignment and `@copilot` correction as potentially consuming AI credits. Reuse live work, batch corrections, avoid duplicate tasks, and stop early when direct implementation is cheaper.
+
+When current account usage or remaining allowance is known, treat it as a scheduling constraint:
+- preserve credits for high-leverage bounded implementation work;
+- avoid exploratory or speculative delegations;
+- avoid using Copilot merely for validation, status checks, policy edits, or changes that repository primitives can perform safely;
+- favor one well-specified task over several overlapping micro-tasks.
 
 ## Repository customizations
 
