@@ -16,6 +16,26 @@ REQUIRED_OPERATION_IDS = {
 }
 
 
+def resolve_local_ref(doc: dict, node: object) -> object:
+    seen: set[str] = set()
+    current = node
+    while isinstance(current, dict) and "$ref" in current:
+        ref = current.get("$ref")
+        if not isinstance(ref, str) or not ref.startswith("#/"):
+            return {}
+        if ref in seen:
+            return {}
+        seen.add(ref)
+        target: object = doc
+        for raw_part in ref[2:].split("/"):
+            part = raw_part.replace("~1", "/").replace("~0", "~")
+            if not isinstance(target, dict) or part not in target:
+                return {}
+            target = target[part]
+        current = target
+    return current
+
+
 def has_bearer_requirement(security: object) -> bool:
     if not isinstance(security, list):
         return False
@@ -101,8 +121,10 @@ def validate() -> list[str]:
         .get("schema", {})
     )
     site_items = sites_schema.get("items", {}) if isinstance(sites_schema, dict) else {}
+    site_items = resolve_local_ref(doc, site_items)
     site_props = site_items.get("properties", {}) if isinstance(site_items, dict) else {}
     build_settings = site_props.get("build_settings", {}) if isinstance(site_props, dict) else {}
+    build_settings = resolve_local_ref(doc, build_settings)
     build_settings_props = build_settings.get("properties", {}) if isinstance(build_settings, dict) else {}
     for required_prop in ("repo_path", "repo_url"):
         if required_prop not in build_settings_props:
@@ -113,6 +135,7 @@ def validate() -> list[str]:
         .get("schemas", {})
         .get("Deploy", {})
     )
+    deploy_schema = resolve_local_ref(doc, deploy_schema)
     deploy_props = deploy_schema.get("properties", {}) if isinstance(deploy_schema, dict) else {}
     for required_prop in ("id", "site_id", "build_id", "state", "commit_ref", "error_message"):
         if required_prop not in deploy_props:
@@ -130,6 +153,7 @@ def validate() -> list[str]:
         .get("application/json", {})
         .get("schema", {})
     )
+    build_schema = resolve_local_ref(doc, build_schema)
     build_props = build_schema.get("properties", {}) if isinstance(build_schema, dict) else {}
     for required_prop in ("id", "deploy_id", "sha", "done", "error", "created_at"):
         if required_prop not in build_props:
