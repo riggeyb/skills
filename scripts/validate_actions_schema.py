@@ -17,6 +17,11 @@ HTTP_METHODS = {"get", "put", "post", "delete", "patch", "options", "head", "tra
 # they require executable handler logic rather than an OpenAPI alias.
 REQUIRED_OPERATIONS = {
     "createOrUpdateRepositoryFile": True,
+    "createRepositoryIssue": True,
+    "getRepositoryIssue": False,
+    "addRepositoryIssueAssignees": True,
+    "listRepositoryIssueTimelineEvents": False,
+    "createRepositoryIssueComment": True,
     "getPullRequest": False,
     "listPullRequestFiles": False,
     "listWorkflowRuns": False,
