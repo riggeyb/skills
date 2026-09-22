@@ -272,7 +272,13 @@
                       "type": "string",
                       "format": "date-time"
                     }
-                  }
+                  },
+                  "required": [
+                    "id",
+                    "deploy_id",
+                    "sha",
+                    "done"
+                  ]
                 }
               }
             }
@@ -331,7 +337,13 @@
           "context": {
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "id",
+          "site_id",
+          "build_id",
+          "state"
+        ]
       }
     },
     "securitySchemes": {

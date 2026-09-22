@@ -55,6 +55,7 @@ def validate() -> list[str]:
         return [f"{SCHEMA}: paths must be an object"]
 
     seen: set[str] = set()
+    operations_by_id: dict[str, dict] = {}
     for route, path_item in paths.items():
         if not isinstance(path_item, dict):
             errors.append(f"{route}: path item must be an object")
@@ -75,6 +76,7 @@ def validate() -> list[str]:
             if op_id in seen:
                 errors.append(f"{route} {method}: duplicate operationId {op_id!r}")
             seen.add(op_id)
+            operations_by_id[op_id] = operation
 
             if operation.get("x-openai-isConsequential") is not False:
                 errors.append(f"{route} {method} {op_id}: x-openai-isConsequential must be false")
@@ -89,6 +91,53 @@ def validate() -> list[str]:
         errors.append(f"{SCHEMA}: required operation {op_id!r} is missing")
     for op_id in sorted(unexpected):
         errors.append(f"{SCHEMA}: unexpected operation {op_id!r}; only the four bounded read operations are allowed")
+
+    sites_op = operations_by_id.get("listNetlifySites", {})
+    sites_schema = (
+        sites_op.get("responses", {})
+        .get("200", {})
+        .get("content", {})
+        .get("application/json", {})
+        .get("schema", {})
+    )
+    site_items = sites_schema.get("items", {}) if isinstance(sites_schema, dict) else {}
+    site_props = site_items.get("properties", {}) if isinstance(site_items, dict) else {}
+    build_settings = site_props.get("build_settings", {}) if isinstance(site_props, dict) else {}
+    build_settings_props = build_settings.get("properties", {}) if isinstance(build_settings, dict) else {}
+    for required_prop in ("repo_path", "repo_url"):
+        if required_prop not in build_settings_props:
+            errors.append(f"{SCHEMA}: listNetlifySites response must include build_settings.{required_prop}")
+
+    deploy_schema = (
+        doc.get("components", {})
+        .get("schemas", {})
+        .get("Deploy", {})
+    )
+    deploy_props = deploy_schema.get("properties", {}) if isinstance(deploy_schema, dict) else {}
+    for required_prop in ("id", "site_id", "build_id", "state", "commit_ref", "error_message"):
+        if required_prop not in deploy_props:
+            errors.append(f"{SCHEMA}: Deploy schema must include {required_prop}")
+    deploy_required = deploy_schema.get("required", []) if isinstance(deploy_schema, dict) else []
+    for required_prop in ("id", "site_id", "build_id", "state"):
+        if required_prop not in deploy_required:
+            errors.append(f"{SCHEMA}: Deploy schema must require {required_prop}")
+
+    build_op = operations_by_id.get("getNetlifySiteBuild", {})
+    build_schema = (
+        build_op.get("responses", {})
+        .get("200", {})
+        .get("content", {})
+        .get("application/json", {})
+        .get("schema", {})
+    )
+    build_props = build_schema.get("properties", {}) if isinstance(build_schema, dict) else {}
+    for required_prop in ("id", "deploy_id", "sha", "done", "error", "created_at"):
+        if required_prop not in build_props:
+            errors.append(f"{SCHEMA}: getNetlifySiteBuild response must include {required_prop}")
+    build_required = build_schema.get("required", []) if isinstance(build_schema, dict) else []
+    for required_prop in ("id", "deploy_id", "sha", "done"):
+        if required_prop not in build_required:
+            errors.append(f"{SCHEMA}: getNetlifySiteBuild response must require {required_prop}")
 
     return errors
 
