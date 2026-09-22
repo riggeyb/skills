@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Sentient Standard Library Lock",
+  "type": "object",
+  "required": ["schema_version", "modules"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "version", "source_repository", "source_commit", "source_blob", "source_path", "destination_path", "installed_blob"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "version": { "type": "string", "minLength": 1 },
+          "source_repository": { "type": "string", "pattern": "^[^/]+/[^/]+$" },
+          "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+          "source_blob": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+          "source_path": { "type": "string", "minLength": 1 },
+          "destination_path": { "type": "string", "minLength": 1 },
+          "installed_blob": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
