@@ -266,7 +266,10 @@
                       "type": "boolean"
                     },
                     "error": {
-                      "type": "string"
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "created_at": {
                       "type": "string",
@@ -299,7 +302,10 @@
             "type": "string"
           },
           "build_id": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "state": {
             "type": "string"
@@ -341,7 +347,6 @@
         "required": [
           "id",
           "site_id",
-          "build_id",
           "state"
         ]
       }

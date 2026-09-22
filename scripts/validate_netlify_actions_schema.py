@@ -141,7 +141,7 @@ def validate() -> list[str]:
         if required_prop not in deploy_props:
             errors.append(f"{SCHEMA}: Deploy schema must include {required_prop}")
     deploy_required = deploy_schema.get("required", []) if isinstance(deploy_schema, dict) else []
-    for required_prop in ("id", "site_id", "build_id", "state"):
+    for required_prop in ("id", "site_id", "state"):
         if required_prop not in deploy_required:
             errors.append(f"{SCHEMA}: Deploy schema must require {required_prop}")
 
