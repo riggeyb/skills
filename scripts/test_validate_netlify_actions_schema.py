@@ -26,6 +26,9 @@ class NetlifyActionsSchemaValidationTests(unittest.TestCase):
         build_schema = (
             schema["paths"]["/builds/{build_id}"]["get"]["responses"]["200"]["content"]["application/json"]["schema"]
         )
+        build_schema = mod.resolve_local_ref(schema, build_schema)
+        self.assertIsInstance(build_schema, dict)
+        self.assertIn("required", build_schema)
         build_schema["required"] = [x for x in build_schema["required"] if x != "sha"]
 
         with tempfile.TemporaryDirectory() as tmp:
