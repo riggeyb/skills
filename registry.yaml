@@ -144,6 +144,19 @@ skills:
       - skills/github-ci-evidence/SKILL.md
     triggers: [GitHub CI, GitHub Actions, workflow runs, workflow jobs, check runs, commit status, exact SHA, CI failure, CI diagnosis, CI convergence, failure evidence, failure fingerprint, artifact evidence, repository-readable diagnostic, evidence materialization, stale CI, missing workflow]
 
+  - id: netlify-deploy-evidence
+    title: Netlify Deploy Evidence
+    repository: riggeyb/skills
+    category: repository-engineering
+    mode: instruction
+    trust: first-party
+    update_policy: reviewed
+    last_reviewed: "2026-09-22"
+    ref: main
+    entrypoints:
+      - skills/netlify-deploy-evidence/SKILL.md
+    triggers: [Netlify deploy evidence, Netlify site deploys, Netlify build evidence, exact SHA deploy evidence, stale deploy, deploy pending, deploy verification]
+
   - id: test-strategy
     title: Test Strategy
     repository: riggeyb/skills

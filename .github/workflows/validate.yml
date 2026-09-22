@@ -39,6 +39,9 @@ jobs:
       - name: Validate GPT Actions schema compatibility
         run: python scripts/validate_actions_schema.py
 
+      - name: Validate Netlify Actions schema compatibility
+        run: python scripts/validate_netlify_actions_schema.py
+
       - name: Validate GitHub repositories and entrypoints
         env:
           GITHUB_TOKEN: ${{ github.token }}
