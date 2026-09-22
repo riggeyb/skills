@@ -84,6 +84,23 @@ capabilities:
       - workflow and job observations can be bound to an exact head SHA
       - artifact metadata is evidence about an artifact, not evidence of its uninspected contents
 
+  netlify_deploy_evidence:
+    status: runtime_dependent
+    provider: netlify-evidence-action
+    mutating: false
+    operations:
+      - listNetlifySites
+      - listNetlifySiteDeploys
+      - getNetlifySiteDeploy
+      - getNetlifySiteBuild
+    guarantees:
+      - deploy evidence can be bound to an exact target SHA using deploy.commit_ref and, when needed, build.sha
+      - stale deploy/build evidence for a different SHA must be treated as non-certifying
+      - capability scope is bounded to read-only deployment/build evidence operations
+    limitations:
+      - requires runtime exposure of the Netlify evidence action with configured Bearer authentication (Netlify personal access token)
+      - availability is runtime dependent; the skill text does not create this capability
+
   github_copilot_delegation:
     status: runtime_dependent
     provider: github-skills-action
