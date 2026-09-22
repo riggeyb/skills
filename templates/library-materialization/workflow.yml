@@ -1,0 +1,59 @@
+name: Sentient library materialization
+on:
+  push:
+    paths: [".sentient/library-requests/*.json"]
+permissions:
+  contents: write
+concurrency:
+  group: sentient-library-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Apply exact library request
+        shell: bash
+        run: |
+          set -euo pipefail
+          request="$(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA" -- '.sentient/library-requests/*.json' | tail -n 1)"
+          test -n "$request"
+          python3 - "$request" <<'PY'
+          import hashlib,json,pathlib,subprocess,sys,urllib.request
+          rp=pathlib.Path(sys.argv[1]); r=json.loads(rp.read_text())
+          need=["module_id","version","source_repository","source_commit","source_path","expected_source_blob","destination_path","destination_precondition"]
+          missing=[k for k in need if k not in r]
+          if missing: raise SystemExit(f"missing fields: {missing}")
+          commit=r["source_commit"]; expected=r["expected_source_blob"]
+          if len(commit)!=40 or len(expected)!=40: raise SystemExit("commit/blob must be 40-character SHAs")
+          dest=pathlib.Path(r["destination_path"])
+          if dest.is_absolute() or ".." in dest.parts: raise SystemExit("invalid destination path")
+          url=f"https://raw.githubusercontent.com/{r['source_repository']}/{commit}/{r['source_path']}"
+          data=urllib.request.urlopen(url,timeout=30).read()
+          actual=hashlib.sha1(b"blob "+str(len(data)).encode()+b"\0"+data).hexdigest()
+          if actual!=expected: raise SystemExit(f"source blob mismatch: {actual}")
+          pre=r["destination_precondition"]
+          if pre=="absent":
+              if dest.exists(): raise SystemExit("destination must be absent")
+          else:
+              if len(pre)!=40 or not dest.exists(): raise SystemExit("destination precondition unsatisfied")
+              current=subprocess.check_output(["git","hash-object",str(dest)],text=True).strip()
+              if current!=pre: raise SystemExit(f"destination blob mismatch: {current}")
+          dest.parent.mkdir(parents=True,exist_ok=True); dest.write_bytes(data)
+          if r.get("record_provenance",True):
+              lp=pathlib.Path(r.get("lockfile_path",".sentient/library-lock.json"))
+              lock=json.loads(lp.read_text()) if lp.exists() else {"schema_version":1,"modules":[]}
+              rec={"id":r["module_id"],"version":r["version"],"source_repository":r["source_repository"],"source_commit":commit,"source_blob":actual,"source_path":r["source_path"],"destination_path":r["destination_path"],"installed_blob":actual}
+              lock["schema_version"]=1
+              lock["modules"]=[m for m in lock.get("modules",[]) if not(m.get("id")==rec["id"] and m.get("destination_path")==rec["destination_path"])]
+              lock["modules"].append(rec); lp.parent.mkdir(parents=True,exist_ok=True)
+              lp.write_text(json.dumps(lock,indent=2,sort_keys=True)+"\n")
+          rp.unlink()
+          PY
+          git add -A -- .
+          git diff --cached --quiet && { echo "No changes" >&2; exit 1; }
+          git config user.name sentient-library-bot
+          git config user.email sentient-library-bot@users.noreply.github.com
+          git commit -m "Materialize Sentient library module"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
