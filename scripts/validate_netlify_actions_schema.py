@@ -81,6 +81,7 @@ def validate(schema_path: Path | None = None) -> list[str]:
         if not isinstance(path_item, dict):
             errors.append(f"{route}: path item must be an object")
             continue
+        path_security = path_item.get("security", global_security)
         for method, operation in path_item.items():
             if method.lower() not in HTTP_METHODS:
                 continue
@@ -102,7 +103,7 @@ def validate(schema_path: Path | None = None) -> list[str]:
             if operation.get("x-openai-isConsequential") is not False:
                 errors.append(f"{route} {method} {op_id}: x-openai-isConsequential must be false")
 
-            effective_security = operation.get("security", global_security)
+            effective_security = operation.get("security", path_security)
             if not has_bearer_requirement(effective_security):
                 errors.append(f"{route} {method} {op_id}: bearerAuth security is required")
 
