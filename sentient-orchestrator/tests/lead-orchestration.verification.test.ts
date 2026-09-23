@@ -24,7 +24,7 @@ test("pending/blocked/handoff/rework gate readiness and rework history survives"
  await db.query(`UPDATE worker_assignments SET status='blocked' WHERE task_id=$1`,[t]);assert.deepEqual((await s.integrationStatus(t)).blockers,["req:blocked"]);
  await db.query(`UPDATE worker_assignments SET status='in_progress' WHERE task_id=$1`,[t]);await s.submitHandoff(t,"req",w,{v:1});assert.deepEqual((await s.integrationStatus(t)).blockers,["req:handed_off"]);
  await s.review({taskId:t,leadWorkerId:l,epoch:lead.epoch,assignmentId:"req",handoffId:"h1",decision:"rework"});assert.deepEqual((await s.integrationStatus(t)).blockers,["req:rework"]);
- const ev=(await db.query(`SELECT event_type,payload FROM lead_assignment_events WHERE task_id=$1`,[t])).rows;assert.ok(ev.some(x=>x.event_type==="HANDOFF_SUBMITTED"&&x.payload.v===1));assert.ok(ev.some(x=>x.event_type==="REWORK_REQUIRED"&&x.payload.handoffId==="h1"));
+ const ev=(await db.query(`SELECT event_type,payload FROM lead_assignment_events WHERE task_id=$1`,[t])).rows;assert.ok(ev.some(x=>x.event_type==="HANDOFF_SUBMITTED"&&x.payload.handoff?.v===1));assert.ok(ev.some(x=>x.event_type==="REWORK_REQUIRED"&&x.payload.handoffId==="h1"));
  await s.submitHandoff(t,"req",w,{v:2});await s.review({taskId:t,leadWorkerId:l,epoch:lead.epoch,assignmentId:"req",handoffId:"h2",decision:"accepted"});assert.equal((await s.integrationStatus(t)).ready,true);
  await db.query(`UPDATE task_leadership SET lease_expires_at=now()-interval'1 second' WHERE task_id=$1`,[t]);assert.equal((await s.integrationStatus(t)).ready,false);
 }finally{await db.end()}});
