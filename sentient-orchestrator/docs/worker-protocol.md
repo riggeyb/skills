@@ -1,15 +1,17 @@
 # Sentient worker protocol
 
-Protocol `1.0` makes worker identity model-independent: a runtime receives a `WorkerContract`, task context, tools, and a model. The contract defines identity, scope, permissions, resources, budget, completion, and reporting.
+Protocol `1.0` makes worker identity model/provider-independent. A runtime receives a `WorkerContractV1`, task context, tools, and a model; the contract defines identity, bounded work, explicit authority, resources, budget, completion, and reporting.
 
-`src/worker-protocol.ts` is the TypeScript API and validation boundary. `schemas/sentient-worker-contract.v1.schema.json` is the portable contract schema. Validators reject unsupported versions, malformed data, identity/tenant/task mismatches, unknown causal parents, and authority violations before durable state. `negotiateProtocolVersion` selects only explicitly supported versions; adding a future decoder must not silently reinterpret v1 data.
+`src/worker-protocol.ts` is the TypeScript API and validation boundary. `schemas/sentient-worker-contract.v1.schema.json` is the portable contract schema. Validators reject unsupported versions, malformed data, identity/tenant/task/repository mismatches, invalid causal parents, and authority violations before durable state. `negotiateProtocolVersion` accepts only mutually supported versions.
 
-Authority is least-privilege. An empty `authority` list permits no privileged operation, even when a corresponding tool is installed. Callers map an operation to an `Authority` and call `assertAuthority` before execution/persistence.
+Authority is least-privilege. An empty `authority` list permits no privileged operation even when a corresponding tool is installed. Callers map an operation to an `Authority` and call `assertAuthority` before execution or persistence.
 
-Messages are typed by `kind` and carry message/task/tenant/sender/recipient/time metadata plus optional correlation, causal parent, and revision SHA. Payloads contain operational conclusions/evidence only. `HANDOFF` payloads have a required structured shape.
+`SentientEnvelope<T>` carries `protocolVersion`, message/task/sender identities, optional recipient, required correlation, optional causation/revision, repository/tenant identity, typed payload, and creation time. Types are FINDING, QUESTION, ANSWER, PROPOSAL, DECISION, DEPENDENCY, BLOCKER, CLAIM, RELEASE, HANDOFF, VERIFICATION, ESCALATION, STATUS, and DONE. Payloads transport operational conclusions/evidence, not private chain-of-thought.
 
-Resource claims identify a tenant-scoped resource and lease. Shared/shared claims coexist; any active exclusive claim conflicts with another active claim on the same tenant/type/id. Released or expired claims do not conflict. Persistence/locking mechanics belong to the control plane.
+Resource claims identify a tenant-scoped resource and lease. Shared/shared claims coexist; any active exclusive claim conflicts with another active claim on the same tenant/type/id. Released or expired claims do not conflict. Persistence and locking mechanics belong to the control plane.
 
 ## Control-plane boundary
 
-The protocol assumes durable opaque `tenantId`, `taskId`, and `workerId`, plus optional `parentCoordinatorId`. The control plane owns worker creation, scheduling, lifecycle, persistence, and cancellation mechanics. It should construct contracts, invoke these validators before durable writes/actions, and never infer authority from tools. Coordination issue #68 records this interface so implementations can evolve independently.
+Shared identifiers are opaque `taskId`, `workerId`, optional `parentWorkerId`, `tenantId`, `repositoryId`, and `correlationId`. The protocol owns what a worker may do and the semantics of contracts/messages/claims/handoffs. The control plane owns whether/when a worker runs, durable lifecycle transitions, lease persistence, retries, cancellation, and runtime adapters. `STATUS` may report lifecycle state but does not mutate durable lifecycle state.
+
+`BudgetEnvelope` defines assigned maxima (`maxCostUsd`, `maxDurationSeconds`, optional `maxTokens`); the control plane remains authoritative for reservation, enforcement, exhaustion, and cancellation. Shared-interface coordination is recorded in issue #66.
