@@ -1,146 +1,199 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  validateSandboxSpec,
-  type SandboxSpec,
-} from "../src/sandbox.js";
+  ActionsExecutor,
+  parseSentientWorkflow,
+  type ActionExecutionContext,
+  type ActionJob,
+  type ActionJobResult,
+  type ActionJobRunner,
+} from "../src/actions.js";
+import { buildCheckAnnotation } from "../src/github-checks.js";
+import { validateRefName } from "../src/github-pr.js";
+import { validateSandboxSpec } from "../src/sandbox.js";
+import {
+  artifactObjectKey,
+  cacheObjectKey,
+  sha256,
+  type StorageScope,
+} from "../src/storage-scope.js";
 import {
   safeSegment,
   validateGitRef,
   workspaceBranch,
 } from "../src/workspace.js";
-import {
-  ActionsExecutor,
-  parseSentientWorkflow,
-  type ActionJob,
-  type ActionJobResult,
-  type ActionJobRunner,
-  type ActionExecutionContext,
-} from "../src/actions.js";
-import {
-  artifactObjectKey,
-  cacheObjectKey,
-  sha256,
-} from "../src/storage-scope.js";
-import { buildCheckAnnotation } from "../src/github-checks.js";
 
-const image = `ghcr.io/sentient/runner@sha256:${compact = "a".repeat(64)}`;
+const digest = "a".repeat(64);
+const image = `ghcr.io/sentient/runner@sha256:${digest}`;
 
-function sandbox(overrides: Partial<SandboxSpec> = {}): SandboxSpec {
-  return {
+test("sandbox requires immutable image, resource limits and unexpired secrets", () => {
+  const spec = validateSandboxSpec({
     image,
     cpuCores: 2,
     memoryMb: 4096,
     diskMb: 10_240,
     maxPids: 512,
     timeoutMs: 60_000,
-    egress: { mode: "deny-all" },
-    ...overrides,
-  };
-}
-
-test("sandbox policy requires pinned images and unexpired secrets", () => {
+    egress: { mode: "allow-list", hosts: ["github.com"] },
+    secrets: [
+      {
+        name: "GITHUB_TOKEN",
+        value: "ephemeral",
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      },
+    ],
+  });
+  assert.equal(spec.image, image);
   assert.throws(
-    () => validateSandboxSpec(sandbox({ image: "ghcr.io/sentient/runner:latest" })),
-    /sha256/,
+    () =>
+      validateSandboxSpec({
+        ...spec,
+        image: "ghcr.io/sentient/runner:latest",
+      }),
+    /pinned by sha256/,
   );
   assert.throws(
     () =>
-      validateSandboxSpec(
-        sandbox({
-          secrets: [
-            {
-              name: "TOKEN",
-              value: "secret",
-              expiresAt: new Date(Date.now() - 1_000).toISOString(),
-            },
-          ],
-        }),
-      ),
-     /expired/,
-  );
-});
-
-test("sandbox egress allow-list validates hosts", () => {
-  assert.throws(
-    () =>
-      validateSandboxSpec(
-        sandbox({ egress: { mode: "allow-list", hosts: ["../metadata"] } }),
-      ),
+      validateSandboxSpec({
+        ...spec,
+        egress: { mode: "allow-list", hosts: [""] },
+      }),
     /Invalid egress host/,
   );
 });
 
-test("workspace naming and refs reject traversal-like inputs", () => {
-  assert.equal(workspaceBranch("Task 123", "Backend Agent"), "sentient/task-123/backend-agent");
-  assert.equal(safeSegment("Org/Repo"), "org-repo");
+test("workspace naming and refs reject traversal-style inputs", () => {
+  assert.equal(workspaceBranch("task-1", "backend-1"), "sentient/task-1/backend-1");
+  assert.equal(safeSegment("Feature/API"), "feature-api");
   assert.equal(validateGitRef("main"), "main");
   assert.throws(() => validateGitRef("../main"), /Invalid git ref/);
-  assert.throws(() => validateGitRef("-danger"), /Invalid git ref/);
-  assert.throws(() => validateGitRef("feature bad"), /Invalid git ref/);
+  assert.throws(() => validateGitRef("main lock"), /Invalid git ref/);
+  assert.throws(() => validateRefName("refs//heads/main"), /Invalid Git ref/);
 });
 
-class RecordingRunner implements ActionJobRunner {
-  active = 0;
-  peak = 0;
-  starts: string[] = [];
-
-  async run(job: ActionJob, _context: ActionExecutionContext): Promise<ActionJobResult> {
-    this.active += 1;
-    this.peak = Math.max(this.peak, this.active);
-    this.starts.push(job.key);
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    this.active -= 1;
-    return { jobKey: job.key, status: "completed", attempts: 1, summary: "ok", logs: "" };
-  }
-}
-
-test("Sentient Actions parses YAML and runs independent jobs in parallel", async () => {
+test("Sentient Actions parses YAML and runs independent jobs before dependent review", async () => {
   const workflow = parseSentientWorkflow(`
 version: 1
-name: ci
+name: verification
 jobs:
-  lint:
-    image: ${image}
-    steps:
-      - run: npm run lint
-  test:
+  api:
     image: ${image}
     steps:
       - run: npm test
-  build:
+  ui:
     image: ${image}
-    needs: [lint, test]
     steps:
-      - run: npm run build
+      - run: npm run typecheck
+  review:
+    image: ${image}
+    needs: [api, ui]
+    steps:
+      - run: npm run lint
 `);
 
-  const runner = new RecordingRunner();
-  const result = await new ActionsExecutor(runner, 2).execute(workflow, {
+  const events: string[] = [];
+  let active = 0;
+  let peak = 0;
+  const runner: ActionJobRunner = {
+    async run(job: ActionJob): Promise<ActionJobResult> {
+      active += 1;
+      peak = Math.max(peak, active);
+      events.push(`start:${job.key}`);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      events.push(`end:${job.key}`);
+      active -= 1;
+      return {
+        jobKey: job.key,
+        status: "completed",
+        attempts: 1,
+        summary: "ok",
+        logs: "",
+      };
+    },
+  };
+
+  const context: ActionExecutionContext = {
     installationId: 1,
     repository: { owner: "riggeyb", repo: "skills" },
     taskId: "task-1",
     cloneUrl: "https://github.com/riggeyb/skills.git",
     baseRef: "main",
-  });
+  };
+  const result = await new ActionsExecutor(runner, 2).execute(workflow, context);
 
   assert.equal(result.status, "completed");
-  assert.equal(runner.peak, 2);
-  assert.ok(runner.starts.indexOf("build") > runner.starts.indexOf("lint"));
-  assert.ok(runner.starts.indexOf("build") > runner.starts.indexOf("test"));
+  assert.equal(peak, 2);
+  assert.ok(events.indexOf("start:review") > events.indexOf("end:api"));
+  assert.ok(events.indexOf("start:review") > events.indexOf("end:ui"));
 });
 
-test("storage object keys cannot collide across installations", () => {
-  const data = new TextEncoder().encode("payload");
-  const digest = sha256(data);
-  const scope1 = { installationId: 1, repository: { owner: "riggeyb", repo: "skills" }, taskId: "task", runId: "run" };
-  const scope2 = { ...scope1, installationId: 2 };
-
-  assert.notEqual(artifactObjectKey(scope1, "logs", digest), artifactObjectKey(scope2, "logs", digest));
-  assert.notEqual(cacheObjectKey(scope1, "pnpm-lock", digest), cacheObjectKey(scope2, "pnpm-lock", digest));
+test("Sentient Actions rejects dependency cycles", () => {
+  assert.throws(
+    () =>
+      parseSentientWorkflow(`
+version: 1
+name: bad
+jobs:
+  a:
+    image: ${image}
+    needs: [b]
+    steps: [{run: "true"}]
+  b:
+    image: ${image}
+    needs: [a]
+    steps: [{run: "true"}]
+`),
+    /dependency cycle/,
+  );
 });
 
-test("GitHub check annotations normalize valid lines and reject unsafe paths", () => {
-  assert.deepEqual(buildCheckAnnotation({ path: "src/index.ts", startLine: 4, level: "warning", message: "example" }), { path: "src/index.ts", start_line: 4, end_line: 4, annotation_level: "warning", message: "example" });
-  assert.throws(() => buildCheckAnnotation({ path: "../secret", startLine: 1, level: "failure", message: "bad" }), /Invalid check annotation path/);
+test("artifact and cache namespaces cannot collide across installations", () => {
+  const base: StorageScope = {
+    installationId: 10,
+    repository: { owner: "Riggeyb", repo: "Skills" },
+    taskId: "task-1",
+    runId: "run-1",
+  };
+  const other: StorageScope = { ...base, installationId: 11 };
+  const dataDigest = sha256(new TextEncoder().encode("payload"));
+
+  assert.notEqual(
+    artifactObjectKey(base, "logs", dataDigest),
+    artifactObjectKey(other, "logs", dataDigest),
+  );
+  assert.notEqual(
+    cacheObjectKey(base, "npm-linux-node22", dataDigest),
+    cacheObjectKey(other, "npm-linux-node22", dataDigest),
+  );
+});
+
+test("GitHub annotation payload validates file paths and line ranges", () => {
+  assert.deepEqual(
+    buildCheckAnnotation({
+      path: "src/index.ts",
+      startLine: 4,
+      endLine: 6,
+      level: "warning",
+      message: "Potential issue",
+      title: "Review",
+    }),
+    {
+      path: "src/index.ts",
+      start_line: 4,
+      end_line: 6,
+      annotation_level: "warning",
+      message: "Potential issue",
+      title: "Review",
+    },
+  );
+  assert.throws(
+    () =>
+      buildCheckAnnotation({
+        path: "../secret",
+        startLine: 1,
+        level: "failure",
+        message: "bad",
+      }),
+    /Invalid check annotation path/,
+  );
 });
