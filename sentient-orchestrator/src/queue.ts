@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { EnqueueOptions, JobQueue, QueueJob, SentientJobPayload } from "./ports.js";
+import type { EnqueueOptions, RenewableJobQueue, QueueJob, SentientJobPayload } from "./ports.js";
 
 interface InternalJob extends QueueJob {
   idempotencyKey: string;
@@ -9,7 +9,7 @@ interface InternalJob extends QueueJob {
   lastError?: string;
 }
 
-export class InMemoryJobQueue implements JobQueue {
+export class InMemoryJobQueue implements RenewableJobQueue {
   private readonly jobs = new Map<string, InternalJob>();
   private readonly idempotency = new Map<string, string>();
 
@@ -36,11 +36,16 @@ export class InMemoryJobQueue implements JobQueue {
   async lease(workerId: string, leaseMs: number): Promise<QueueJob | null> {
     const now = Date.now();
     const eligible = [...this.jobs.values()]
-      .filter((job) =>
-        (job.status === "queued" || (job.status === "leased" && Date.parse(job.leaseExpiresAt ?? "") <= now)) &&
-        Date.parse(job.availableAt) <= now,
+      .filter(
+        (job) =>
+          (job.status === "queued" ||
+            (job.status === "leased" && Date.parse(job.leaseExpiresAt ?? "") <= now)) &&
+          Date.parse(job.availableAt) <= now,
       )
-      .sort((a, b) => b.priority - a.priority || Date.parse(a.availableAt) - Date.parse(b.availableAt));
+      .sort(
+        (a, b) =>
+          b.priority - a.priority || Date.parse(a.availableAt) - Date.parse(b.availableAt),
+      );
 
     const job = eligible[0];
     if (!job) return null;
@@ -50,6 +55,13 @@ export class InMemoryJobQueue implements JobQueue {
     job.attempts += 1;
     job.leaseExpiresAt = new Date(now + leaseMs).toISOString();
     return structuredClone(job);
+  }
+
+  async renew(jobId: string, workerId: string, leaseMs: number): Promise<boolean> {
+    const job = this.jobs.get(jobId);
+    if (!job || job.status !== "leased" || job.workerId !== workerId) return false;
+    job.leaseExpiresAt = new Date(Date.now() + leaseMs).toISOString();
+    return true;
   }
 
   async complete(jobId: string, workerId: string): Promise<void> {
