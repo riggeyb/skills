@@ -33,7 +33,7 @@ test("orchestrator completes planner, parallel agents, then reviewer", async () 
   assert.equal(progress.events.at(-1)?.headline, "Task completed");
 });
 
-test("delivery ids are idempotent", async () => {
+test("delivery retries resolve to the same durable task", async () => {
   const store = new InMemoryTaskStore();
   const orchestrator = new Orchestrator(
     store,
@@ -49,6 +49,10 @@ test("delivery ids are idempotent", async () => {
     requestedBy: "tester",
   };
 
-  await orchestrator.start("first", origin);
-  await assert.rejects(() => orchestrator.start("second", origin), /Duplicate delivery/);
+  const first = await orchestrator.start("first", origin);
+  const retry = await orchestrator.start("second", origin);
+
+  assert.equal(retry.id, first.id);
+  assert.equal(retry.objective, "first");
+  assert.equal(retry.status, "completed");
 });
