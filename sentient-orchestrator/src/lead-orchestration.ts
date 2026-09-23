@@ -117,6 +117,9 @@ export class LeadOrchestrationStore{
       await c.query("BEGIN");await this.assertActiveLeadTx(c,i.taskId,i.leadWorkerId,i.epoch);
       const r=await c.query(`SELECT * FROM worker_assignments WHERE task_id=$1 AND external_id=$2 FOR UPDATE`,[i.taskId,i.assignmentId]);
       if(r.rowCount!==1||r.rows[0].status!=="handed_off")throw new LeadOrchestrationError("INVALID_ASSIGNMENT_STATE","handoff not awaiting review");
+      const storedHandoffId=r.rows[0].handoff?.handoffId;
+      if(typeof storedHandoffId!=="string"||storedHandoffId.length===0)throw new LeadOrchestrationError("UNKNOWN_HANDOFF","stored handoff has no handoffId");
+      if(storedHandoffId!==i.handoffId)throw new LeadOrchestrationError("HANDOFF_MISMATCH","review does not reference the submitted handoff");
       const status=i.decision==="accepted"?"accepted":"rework",review={handoffId:i.handoffId,decision:i.decision,reason:i.reason??null};
       await c.query(`UPDATE worker_assignments SET status=$2,last_review=$3::jsonb,revision=CASE WHEN $2='rework' THEN revision+1 ELSE revision END,updated_at=now() WHERE id=$1`,[r.rows[0].id,status,JSON.stringify(review)]);
       const ev=i.decision==="accepted"?"HANDOFF_ACCEPTED":"REWORK_REQUIRED";
