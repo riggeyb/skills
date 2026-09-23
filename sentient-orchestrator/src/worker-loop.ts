@@ -41,14 +41,7 @@ export async function runWorkerLoop(
     heartbeat.unref();
 
     try {
-      if (job.payload.type === "task.start") {
-        await orchestrator.start(job.payload.objective, job.payload.origin);
-      } else {
-        const exhaustive: never = job.payload;
-        throw new Error(
-          `Unsupported job payload ${(exhaustive as { type?: string }).type ?? "unknown"}`,
-        );
-      }
+      await orchestrator.start(job.payload.objective, job.payload.origin);
 
       if (leaseLost) {
         throw new Error(`Lease lost while processing job ${job.id}`);
@@ -56,11 +49,19 @@ export async function runWorkerLoop(
       await queue.complete(job.id, workerId);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      const result = await queue.fail(job.id, workerId, message);
-      const disposition = result.deadLettered
-        ? "dead-lettered"
-        : `retry scheduled at ${result.retryAt}`;
-      console.error(`[sentient] job ${job.id} failed: ${message}; ${disposition}`);
+      try {
+        const result = await queue.fail(job.id, workerId, message);
+        const disposition = result.deadLettered
+          ? "dead-lettered"
+          : `retry scheduled at ${result.retryAt}`;
+        console.error(`[sentient] job ${job.id} failed: ${message}; ${disposition}`);
+      } catch (leaseError) {
+        const leaseMessage =
+          leaseError instanceof Error ? leaseError.message : String(leaseError);
+        console.error(
+          `[sentient] job ${job.id} failed after losing queue ownership: ${message}; ${leaseMessage}`,
+        );
+      }
     } finally {
       clearInterval(heartbeat);
     }
