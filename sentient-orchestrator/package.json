@@ -9,8 +9,10 @@
   "scripts": {
     "dev": "tsx src/server.ts",
     "dev:worker": "tsx src/worker.ts",
+    "dev:worker:automatic": "tsx src/automatic-worker.ts",
     "start": "tsx src/server.ts",
     "worker": "tsx src/worker.ts",
+    "worker:automatic": "tsx src/automatic-worker.ts",
     "migrate": "tsx src/migrate.ts",
     "test": "tsx --test --test-concurrency=1 tests/**/*.test.ts",
     "typecheck": "tsc --noEmit"
