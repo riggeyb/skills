@@ -6,22 +6,28 @@ const TOKEN_PATTERNS: RegExp[] = [
 ];
 
 export class SecretRedactor {
-  private readonly variants = new Set<string>();
+  private readonly variants = new Map<string, number>();
 
   register(secret: string): void {
     if (!secret || secret.length < 4) return;
     for (const variant of secretVariants(secret)) {
-      if (variant.length >= 4) this.variants.add(variant);
+      if (variant.length < 4) continue;
+      this.variants.set(variant, (this.variants.get(variant) ?? 0) + 1);
     }
   }
 
   unregister(secret: string): void {
-    for (const variant of secretVariants(secret)) this.variants.delete(variant);
+    for (const variant of secretVariants(secret)) {
+      const count = this.variants.get(variant);
+      if (!count) continue;
+      if (count <= 1) this.variants.delete(variant);
+      else this.variants.set(variant, count - 1);
+    }
   }
 
   redact(text: string): string {
     let output = text;
-    const variants = [...this.variants].sort((a, b) => b.length - a.length);
+    const variants = [...this.variants.keys()].sort((a, b) => b.length - a.length);
     for (const variant of variants) {
       output = replaceAllLiteral(output, variant, "[REDACTED]");
     }
