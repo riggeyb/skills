@@ -1,0 +1,2 @@
+-- Compatibility marker: reporter principal provisioning moved to 005_reporter_principal.sql.
+-- This filename is kept to avoid migration-identity surprises in any environment that may have observed it.
