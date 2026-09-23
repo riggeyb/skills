@@ -37,6 +37,12 @@ Automatic mode uses the existing demo runtime unless `MODEL_RUNTIME_ENDPOINT` is
 - `MODEL_RUNTIME_MODEL_ID` (optional)
 - `MODEL_RUNTIME_AUTH_TOKEN` (optional)
 - `MODEL_RUNTIME_CAPABILITIES`
-- `MODEL_RUNTIME_MODEL_TIERS` (optional)
+- `MODDRUNTIME_MODEL_TIERS` (optional)
 
 `lead-control` is kept off the model-backed specialist capability list.
+
+## Remaining trust boundary
+
+A remote `ModelExecutionAdapter` is an execution boundary. The runtime constrains the assignment and declared capabilities sent to it, rejects unauthorized reported tool capabilities and unexpected/private-reasoning result fields, and durably fences identity, result, and spend. It cannot by itself prevent a malicious remote adapter from performing undeclared external side effects; stronger enforcement requires a capability-broker or sandboxed provider adapter.
+
+Restart recovery is intentionally fail-closed for an execution whose provider outcome is ambiguous. Resuming instead of retrying would require an adapter/provider contract for idempotent status lookup or reattachment.
