@@ -131,7 +131,7 @@ export interface SentientEnvelope<T = unknown> {
   payload: T;
   createdAt: string;
 }
-export type ProtocolMessage<T = Record<string, unknown>> = SentientEnvelope<T>;
+export type ProtocolMessage<T = unknown> = SentientEnvelope<T>;
 
 export const LEAD_AUTHORITY_BY_MESSAGE: Partial<Record<MessageType, Authority>> = {
   ASSIGNMENT: "workers:assign",
