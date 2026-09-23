@@ -159,7 +159,7 @@ const date=(v:unknown,f:string):string=>{
 };
 const positiveInt=(v:unknown,f:string):number=>{
   if(typeof v!=="number"||!Number.isInteger(v)||v<=0) fail("MALFORMED",`${f} must be a positive integer`);
-  return v;
+  return v as number;
 };
 const bool=(v:unknown,f:string):boolean =>
   typeof v==="boolean" ? v : fail("MALFORMED",`${f} must be boolean`);
