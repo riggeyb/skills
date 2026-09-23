@@ -19,9 +19,9 @@ export class WorkerStore {
          repository_permissions, workspace_requirement, parent_worker_id, coordinator_id,
          idempotency_key, correlation_id, max_attempts
        )
-       VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11::jsonb,$12::jsonb,$13,$14,$15,$16,$17)
+       VALUES($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10,$11::jsonb,$12::jsonb,$13,$14,$15,$16,$17)
        ON CONFLICT(tenant,idempotency_key) DO NOTHING
-       RETURNINC id`,
+       RETURNING id`,
       [
         x.taskId,
         x.tenant,
@@ -29,7 +29,7 @@ export class WorkerStore {
         x.repository.repo,
         x.role,
         JSON.stringify(x.assignment),
-        x.requiredCapabilities ?? [],
+        JSON.stringify(x.requiredCapabilities ?? []),
         x.preferredModelTier ?? null,
         x.maxCostUsd ?? null,
         x.maxDurationMs ?? null,
@@ -101,7 +101,7 @@ export class WorkerStore {
          JOIN sentient_workers w ON w.id=d.depends_on_worker_id
          WHERE d.spawn_request_id=$1`,
         [id],
-       )
+      )
     ).rows;
   }
 
@@ -109,11 +109,11 @@ export class WorkerStore {
     await this.db.query(
       `UPDATE worker_spawn_requests
        SET status='blocked',
-          claim_owner=NULL,
-          claim_expires_at=NULL,
-          last_error=$2,
-          next_attempt_at=now()+$3*interval '1 millisecond',
-          updated_at=now()
+           claim_owner=NULL,
+           claim_expires_at=NULL,
+           last_error=$2,
+           next_attempt_at=now()+$3*interval '1 millisecond',
+           updated_at=now()
        WHERE id=$1`,
       [id, reason, recheckMs],
     );
@@ -181,14 +181,14 @@ export class WorkerStore {
       const terminal = ["completed", "failed", "cancelled", "expired"].includes(to);
       const result = await client.query(
         `UPDATE sentient_workers
-       SET status=$2,
-           started_at=CASE WHEN $2='running' THEN coalesce(started_at,now()) ELSE started_at END,
-           completed_at=CASE WHEN $3 THEN now() ELSE completed_at END,
-           failure_reason=CASE WHEN $2='failed' THEN $4 ELSE failure_reason END,
-           termination_reason=CASE WHEN $2 IN('cancelled','expired') THEN $4 ELSE termination_reason END,
-           lease_owner=CASE WHEN $3 THEN NULL ELSE lease_owner END,
-           lease_expires_at=CASE WHEN $3 THEN NULL ELSE lease_expires_at END
-       WHERE id=$1 RETURNING *`,
+         SET status=$2,
+             started_at=CASE WHEN $2='running' THEN coalesce(started_at,now()) ELSE started_at END,
+             completed_at=CASE WHEN $3 THEN now() ELSE completed_at END,
+             failure_reason=CASE WHEN $2='failed' THEN $4 ELSE failure_reason END,
+             termination_reason=CASE WHEN $2 IN('cancelled','expired') THEN $4 ELSE termination_reason END,
+             lease_owner=CASE WHEN $3 THEN NULL ELSE lease_owner END,
+             lease_expires_at=CASE WHEN $3 THEN NULL ELSE lease_expires_at END
+         WHERE id=$1 RETURNING *`,
         [id, to, terminal, reason ?? null],
       );
       await client.query("COMMIT");
@@ -211,10 +211,10 @@ export class WorkerStore {
   async heartbeat(id: string, owner: string, ms = 60_000, spent?: number) {
     const result = await this.db.query(
       `UPDATE sentient_workers
-       SET= last_heartbeat_at=now(),
+       SET last_heartbeat_at=now(),
            lease_expires_at=now()+$3*interval '1 millisecond',
            spent_usd=greatest(spent_usd,coalesce($4,spent_usd))
-       WHERE id=$1 AND lease_owner=$2 AND status INH'starting','running','blocked','waiting')
+       WHERE id=$1 AND lease_owner=$2 AND status IN('starting','running','blocked','waiting')
        RETURNING task_id`,
       [id, owner, ms, spent ?? null],
     );
@@ -259,7 +259,7 @@ export class WorkerStore {
            last_error=$2,
            updated_at=now()
        WHERE id=$1
-       RETURNIND status`,
+       RETURNING status`,
       [worker.spawnRequestId, reason],
     );
     const retrying = result.rows[0]?.status === "pending";
