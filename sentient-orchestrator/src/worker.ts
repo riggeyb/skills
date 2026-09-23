@@ -59,7 +59,7 @@ try {
       signal: controller.signal,
     }),
     runControlPlaneLoop(scheduler, runtimeReconciler, leadSupervisor, workerSupervisor, {
-      idlePollMs: Number(process.env.CONTROL_PLANE_POLL_MS ?? 250),
+      pollMs: Number(process.env.CONTROL_PLANE_POLL_MS ?? 250),
       signal: controller.signal,
     }),
   ]);
