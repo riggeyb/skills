@@ -277,6 +277,11 @@ test("model-backed runtime fails closed on private reasoning, tool escape, overs
 test("automatic Lead supervision routes specialist assignments through model runtime and accepts their durable handoffs", { skip: !url }, async () => {
   const db = new Pool({ connectionString: url! });
   try {
+    await db.query(
+      `UPDATE tasks
+       SET status='failed',updated_at=now()
+       WHERE status IN ('queued','planning','running','reviewing')`,
+    );
     const tasks = new PostgresTaskStore(db);
     const task = await tasks.create(
       "prove automatic model-backed Sentient workers",
