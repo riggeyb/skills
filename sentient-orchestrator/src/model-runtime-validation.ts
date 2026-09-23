@@ -3,9 +3,24 @@ import type { WorkerExecutionResult, WorkerHandoff } from "./worker-control.js";
 
 const PRIVATE_REASONING_KEYS = new Set([
   "reasoning",
+  "analysis",
+  "scratchpad",
+  "internalreasoning",
+  "internal_reasoning",
   "chainofthought",
   "chain_of_thought",
   "thoughts",
+]);
+
+const MODEL_RESULT_KEYS = new Set([
+  "status",
+  "conclusion",
+  "evidence",
+  "artifacts",
+  "toolResults",
+  "handoff",
+  "failureReason",
+  "usage",
 ]);
 
 export interface NormalizedModelResult {
@@ -17,6 +32,7 @@ export function normalizeModelResponse(
   request: ModelExecutionRequest,
   response: ModelExecutionResponse,
 ): NormalizedModelResult {
+  assertResponseShape(response);
   rejectPrivateReasoning(response);
   if (response.status !== "completed" && response.status !== "failed") {
     throw new Error("invalid_model_result_status");
@@ -37,13 +53,9 @@ export function normalizeModelResponse(
   }
 
   const supplied = response.handoff ?? {};
-  const objective =
-    typeof supplied.objective === "string" && supplied.objective.length
-      ? supplied.objective
-      : assignmentObjective(request.assignment);
   const handoff: WorkerHandoff = {
     handoffId: `worker:${request.identity.workerId}:attempt:${request.identity.attemptCount}`,
-    objective,
+    objective: assignmentObjective(request.assignment),
     completedWork: stringArray(supplied.completedWork, [response.conclusion]),
     filesCommitsArtifacts: Array.isArray(supplied.filesCommitsArtifacts)
       ? supplied.filesCommitsArtifacts
@@ -77,6 +89,14 @@ export function normalizeModelResponse(
 export class ModelBudgetExceededError extends Error {
   constructor(readonly spentUsd: number) {
     super("budget_exceeded_by_provider");
+  }
+}
+
+function assertResponseShape(response: ModelExecutionResponse): void {
+  for (const key of Object.keys(response)) {
+    if (!MODEL_RESULT_KEYS.has(key)) {
+      throw new Error(`unexpected_model_result_field:${key}`);
+    }
   }
 }
 
