@@ -38,6 +38,7 @@ interface AssignmentRow {
   worker_id: string | null;
   worker_status: string | null;
   attempt_count: number | null;
+  runtime_result: unknown | null;
 }
 
 export class AutomaticLeadSupervisor {
@@ -45,6 +46,7 @@ export class AutomaticLeadSupervisor {
   private readonly maxAttempts: number;
   private readonly leadCapabilities: string[];
   private readonly workerCapabilities: string[];
+  private readonly allowSyntheticHandoffs: boolean;
 
   constructor(
     private readonly db: Pool,
@@ -56,6 +58,7 @@ export class AutomaticLeadSupervisor {
     this.maxAttempts = options.maxAttempts ?? 3;
     this.leadCapabilities = options.leadCapabilities ?? ["lead-control"];
     this.workerCapabilities = options.workerCapabilities ?? ["demo-agent"];
+    this.allowSyntheticHandoffs = options.allowSyntheticHandoffs ?? false;
   }
 
   async tick(): Promise<AutomaticLeadTickResult | null> {
