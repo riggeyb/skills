@@ -191,7 +191,8 @@ export function validateWorkerContract(input:unknown):WorkerContract {
     if(claim.taskId!==v.taskId) fail("CROSS_TASK","resource claim task differs from contract");
     if(claim.tenantId!==v.tenantId) fail("CROSS_TENANT","resource claim tenant differs from contract");
   }
-  const budget=obj(v.budget);
+  const budget=obj
+v.budget);
   for(const f of ["maxTokens","maxCostUsd","maxDurationSeconds"]) {
     if(budget[f]!==undefined && (typeof budget[f]!=="number" || (budget[f] as number)<0)) {
       fail("MALFORMED",`budget.${f} must be non-negative`);
