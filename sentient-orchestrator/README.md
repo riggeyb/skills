@@ -47,18 +47,15 @@ https://YOUR_HOST/api/github/webhooks
 
 ## GitHub App permissions/events
 
-Minimum starting permissions:
+MVP permission:
 
-- Issues: read/write (read task comments and post progress)
-- Contents: read (future repository context)
-- Pull requests: read/write (next milestone)
-- Checks: read/write (Sentient Actions milestone)
+- Issues: read/write (receive issue-comment tasks and post progress)
 
 Subscribe initially to:
 
 - Issue comments
 
-Do not grant broader permissions until a feature needs them.
+Future repository context, pull-request creation, and Checks reporting will require additional permissions when those features land. Do not grant them before they are needed.
 
 ## Architecture
 
