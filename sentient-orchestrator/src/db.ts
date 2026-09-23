@@ -2,7 +2,9 @@ import { Pool } from "pg";
 
 export function createDatabasePool(): Pool {
   const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) throw new Error(Missing required environment variable DATABASE_URL);
+  if (!connectionString) {
+    throw new Error("Missing required environment variable DATABASE_URL");
+  }
 
   return new Pool({
     connectionString,
