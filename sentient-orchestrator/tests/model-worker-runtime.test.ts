@@ -359,6 +359,104 @@ test("automatic Lead supervision routes specialist assignments through model run
 });
 
 
+test("automatic Lead does not accept a completed model worker without its bound durable result", { skip: !url }, async () => {
+  const db = new Pool({ connectionString: url! });
+  let taskId: string | undefined;
+  try {
+    await db.query(
+      `UPDATE tasks
+       SET status='failed',updated_at=now()
+       WHERE status IN ('queued','planning','running','reviewing')`,
+    );
+    const tasks = new PostgresTaskStore(db);
+    const task = await tasks.create(
+      "reject fabricated model-worker completion",
+      {
+        repository: { owner: "riggeyb", repo: "skills" },
+        issueNumber: 66,
+        installationId: 78,
+        deliveryId: randomUUID(),
+        requestedBy: "automatic-model-worker-test",
+      },
+      [],
+    );
+    taskId = task.id;
+
+    const workers = new WorkerStore(db);
+    const adapter = new FakeAdapter(["model-test"], async () => successResponse(0.05));
+    const modelRuntime = new ModelBackedWorkerRuntime(
+      db,
+      new ModelExecutionAdapterRegistry([adapter]),
+    );
+    const runtimes = new RuntimeRegistry([
+      new SupervisedDemoRuntime(["lead-control"]),
+      modelRuntime,
+    ]);
+    const reconciler = new WorkerRuntimeReconciler(db, workers, runtimes);
+    const lead = new AutomaticLeadSupervisor(
+      db,
+      workers,
+      new LeadOrchestrationStore(db),
+      {
+        leaseMs: 60_000,
+        maxAttempts: 2,
+        leadCapabilities: ["lead-control"],
+        workerCapabilities: ["model-test"],
+      },
+    );
+
+    let observed = false;
+    for (let i = 0; i < 100; i++) {
+      await lead.tick();
+      await scheduleOneForTask(db, workers, runtimes, task.id);
+      await reconciler.tick();
+
+      const candidate = await db.query(
+        `SELECT wa.external_id,wa.status,wa.handoff,sw.id AS worker_id,sw.runtime_id,sw.status AS worker_status
+         FROM worker_assignments wa
+         JOIN sentient_workers sw ON sw.id=wa.target_worker_id
+         WHERE wa.task_id=$1
+           AND sw.role<>'lead'
+           AND sw.status='completed'
+           AND wa.status<>'accepted'
+         ORDER BY wa.created_at,wa.id
+         LIMIT 1`,
+        [task.id],
+      );
+      if (candidate.rowCount === 1) {
+        const row = candidate.rows[0];
+        assert.equal(row.runtime_id, "model-backed");
+        assert.equal(row.worker_status, "completed");
+
+        await db.query(`DELETE FROM worker_runtime_executions WHERE worker_id=$1`, [row.worker_id]);
+        await lead.tick();
+
+        const assignment = await db.query(
+          `SELECT status,handoff,last_review
+           FROM worker_assignments
+           WHERE task_id=$1 AND external_id=$2`,
+          [task.id, row.external_id],
+        );
+        assert.equal(assignment.rowCount, 1);
+        assert.notEqual(assignment.rows[0].status, "accepted");
+        assert.equal(assignment.rows[0].handoff, null);
+        assert.equal(assignment.rows[0].last_review, null);
+        assert.notEqual((await tasks.get(task.id)).status, "completed");
+        observed = true;
+        break;
+      }
+
+      await lead.tick();
+      await new Promise((resolve) => setTimeout(resolve, 2));
+    }
+
+    assert.equal(observed, true, "expected to observe a completed model-backed specialist");
+  } finally {
+    if (taskId) await db.query(`DELETE FROM tasks WHERE id=$1`, [taskId]);
+    await db.end();
+  }
+});
+
 async function scheduleOneForTask(
   db: Pool,
   store: WorkerStore,
