@@ -34,7 +34,7 @@ jobs:
           --health-retries 10
 
     env:
-      DATABASE_URL: postgres://postgres:postgres:@localhost:5432/sentient
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/sentient
 
     defaults:
       run:
