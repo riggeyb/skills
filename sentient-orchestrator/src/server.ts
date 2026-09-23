@@ -1,11 +1,13 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { createDatabasePool } from "./db.js";
+import { PostgresGitHubLifecycleStore } from "./github-lifecycle.js";
 import { PostgresJobQueue } from "./postgres.js";
 import { handleGitHubWebhook } from "./webhook.js";
 
 const webhookSecret = required("GITHUB_WEBHOOK_SECRET");
 const pool = createDatabasePool();
 const queue = new PostgresJobQueue(pool);
+const lifecycle = new PostgresGitHubLifecycleStore(pool);
 const port = Number(process.env.PORT ?? 3000);
 
 const server = createServer(async (request, response) => {
@@ -28,6 +30,7 @@ const server = createServer(async (request, response) => {
         rawBody,
         webhookSecret,
         queue,
+        lifecycle,
       });
       return json(response, result.accepted ? 202 : 200, result);
     }
