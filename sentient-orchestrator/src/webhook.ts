@@ -45,16 +45,22 @@ export async function handleGitHubWebhook(input: {
   if (!objective) return { accepted: false, reason: "no_sentient_command" };
   if (!payload.installation?.id) throw new Error("Webhook is missing GitHub App installation id");
 
-  void input.orchestrator.start(objective, {
-    repository: {
-      owner: payload.repository.owner.login,
-      repo: payload.repository.name,
-    },
-    issueNumber: payload.issue.number,
-    installationId: payload.installation.id,
-    deliveryId: input.deliveryId,
-    requestedBy: payload.comment.user.login,
-  });
+  if (!input.deliveryId) throw new Error("Webhook is missing X-GitHub-Delivery");
+
+  void input.orchestrator
+    .start(objective, {
+      repository: {
+        owner: payload.repository.owner.login,
+        repo: payload.repository.name,
+      },
+      issueNumber: payload.issue.number,
+      installationId: payload.installation.id,
+      deliveryId: input.deliveryId,
+      requestedBy: payload.comment.user.login,
+    })
+    .catch((error) => {
+      console.error(`[sentient] task failed for delivery ${input.deliveryId}`, error);
+    });
 
   return { accepted: true };
 }
