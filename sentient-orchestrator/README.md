@@ -89,6 +89,8 @@ The durable worker control plane now supports a task-scoped Lead Sentient. A Lea
 
 Authoritative Lead commands carry a positive leadership epoch. Reacquiring an expired lease advances the epoch, so commands from an earlier lease are fenced even when the same worker becomes Lead again. Assignment targets are task-bound, handoff reviews are bound to the submitted `handoffId`, and cancelled work remains blocking while it is still marked required.
 
+Protocol envelopes are runtime-validated against task, tenant, repository, role, authority, and leadership epoch before any durable Lead mutation is admitted.
+
 ## Production gaps intentionally left for the next milestones
 
 1. Replace `InMemoryTaskStore` with Postgres and a durable queue.
