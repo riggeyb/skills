@@ -1,32 +1,21 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { createDemoAgents } from "./agents.js";
-import { GitHubAppTokenProvider, GitHubIssueProgressSink, ConsoleProgressSink } from "./github.js";
-import { ModelRouter } from "./model-router.js";
-import { Orchestrator } from "./orchestrator.js";
-import { InMemoryTaskStore } from "./store.js";
+import { createDatabasePool } from "./db.js";
+import { PostgresJobQueue } from "./postgres.js";
 import { handleGitHubWebhook } from "./webhook.js";
 
 const webhookSecret = required("GITHUB_WEBHOOK_SECRET");
-const appId = process.env.GITHUB_APP_ID;
-const privateKey = process.env.GITHUB_PRIVATE_KEY?.replace(/\\n/g, "\n");
-
-const progress =
-  appId && privateKey
-    ? new GitHubIssueProgressSink(new GitHubAppTokenProvider(appId, privateKey))
-    : new ConsoleProgressSink();
-
-const orchestrator = new Orchestrator(
-  new InMemoryTaskStore(),
-  createDemoAgents(),
-  new ModelRouter(),
-  progress,
-);
-
+const pool = createDatabasePool();
+const queue = new PostgresJobQueue(pool);
 const port = Number(process.env.PORT ?? 3000);
 
-createServer(async (request, response) => {
+const server = createServer(async (request, response) => {
   try {
     if (request.method === "GET" && request.url === "/healthz") {
+      return json(response, 200, { ok: true });
+    }
+
+    if (request.method === "GET" && request.url === "/readyz") {
+      await pool.query("SELECT 1");
       return json(response, 200, { ok: true });
     }
 
@@ -38,7 +27,7 @@ createServer(async (request, response) => {
         signature: header(request, "x-hub-signature-256"),
         rawBody,
         webhookSecret,
-        orchestrator,
+        queue,
       });
       return json(response, result.accepted ? 202 : 200, result);
     }
@@ -50,9 +39,22 @@ createServer(async (request, response) => {
       error: error instanceof Error ? error.message : String(error),
     });
   }
-}).listen(port, () => {
-  console.log(`Sentient orchestrator listening on :${port}`);
 });
+
+server.listen(port, () => {
+  console.log(`Sentient webhook API listening on :${port}`);
+});
+
+const shutdown = async (signal: string) => {
+  console.log(`[sentient] ${signal} received; shutting down API`);
+  server.close(async () => {
+    await pool.end();
+    process.exit(0);
+  });
+};
+
+process.once("SIGTERM", () => void shutdown("SIGTERM"));
+process.once("SIGINT", () => void shutdown("SIGINT"));
 
 function required(name: string): string {
   const value = process.env[name];
