@@ -287,6 +287,10 @@ function map(row: any): SentientWorker {
     spawnRequestId: row.spawn_request_id,
     taskId: row.task_id,
     tenant: row.tenant,
+    repository: {
+      owner: row.repository_owner,
+      repo: row.repository_name,
+    },
     role: row.role,
     assignment: row.assignment,
     status: row.status,
@@ -299,6 +303,19 @@ function map(row: any): SentientWorker {
     budgetUsd: row.budget_usd == null ? undefined : Number(row.budget_usd),
     spentUsd: Number(row.spent_usd),
     parentWorkerId: row.parent_worker_id ?? undefined,
+    coordinatorId: row.coordinator_id ?? undefined,
     correlationId: row.correlation_id,
+    capabilities: Array.isArray(row.capabilities) ? row.capabilities : [],
+    authority:
+      row.authority && typeof row.authority === "object" && !Array.isArray(row.authority)
+        ? row.authority
+        : {},
+    workspaceAssignment: row.workspace_assignment ?? undefined,
+    modelProviderRequirements:
+      row.model_provider_requirements &&
+      typeof row.model_provider_requirements === "object" &&
+      !Array.isArray(row.model_provider_requirements)
+        ? row.model_provider_requirements
+        : {},
   };
 }
