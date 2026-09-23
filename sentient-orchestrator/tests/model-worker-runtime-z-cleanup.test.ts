@@ -20,7 +20,7 @@ test("model runtime integration fixtures are isolated from later legacy control-
     );
 
     const after = await db.query(
-      `SELECT count()::int AS count
+      `SELECT count(*)::int AS count
        FROM tasks
        WHERE origin->>'requestedBy' IN ('model-worker-runtime-test','automatic-model-worker-test')`,
     );
