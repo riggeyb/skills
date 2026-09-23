@@ -80,7 +80,7 @@ export class AutomaticLeadSupervisor {
       return { taskId: task.id, action: `lead_${leadWorker.status}` };
     }
 
-    const leadership = await this.ensureLeadership(task.id, leadWorkerId);
+    const leadership = await this.ensureLeadership(task.id, leadWorker.id);
     await this.reconcileAssignments(task, leadership);
 
     const assignments = await this.assignmentStatuses(task.id);
@@ -213,7 +213,7 @@ export class AutomaticLeadSupervisor {
        WHERE wa.task_id=$1
        ORDER BY wa.created_at,wa.id`,
       [task.id],
-   );
+    );
 
     for (const row of result.rows as AssignmentRow[]) {
       if (!row.spawn_request_id || !row.worker_id) continue;
