@@ -58,7 +58,7 @@ export interface SentientWorker {
   spawnRequestId: string;
   taskId: string;
   tenant: string;
-  repository: { owner: string; repo: string };
+  repository?: { owner: string; repo: string };
   role: string;
   assignment: unknown;
   status: WorkerStatus;
@@ -73,10 +73,10 @@ export interface SentientWorker {
   parentWorkerId?: string;
   coordinatorId?: string;
   correlationId: string;
-  capabilities: string[];
-  authority: Record<string, unknown>;
+  capabilities?: string[];
+  authority?: Record<string, unknown>;
   workspaceAssignment?: unknown;
-  modelProviderRequirements: Record<string, unknown>;
+  modelProviderRequirements?: Record<string, unknown>;
 }
 
 export interface RuntimeRequirements {
