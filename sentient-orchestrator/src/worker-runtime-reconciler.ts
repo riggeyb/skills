@@ -41,6 +41,10 @@ export class WorkerRuntimeReconciler {
       if (!runtime) continue;
 
       const state = await runtime.inspect(worker.runtimeHandle);
+      if (state.result !== undefined) {
+        await this.persistResult(worker.id, state.result);
+      }
+
       if (state.status === "completed") {
         await this.store.transition(worker.id, "completed");
         changed++;
@@ -66,5 +70,26 @@ export class WorkerRuntimeReconciler {
       }
     }
     return changed;
+  }
+
+  private async persistResult(workerId: string, result: unknown): Promise<void> {
+    const serialized = JSON.stringify(result);
+    if (serialized === undefined) throw new Error("Worker runtime result must be JSON-serializable");
+
+    const updated = await this.db.query(
+      `UPDATE sentient_workers
+       SET runtime_result=$2::jsonb
+       WHERE id=$1
+         AND runtime_result IS DISTINCT FROM $2::jsonb
+       RETURNING id`,
+      [workerId, serialized],
+    );
+    if (!updated.rowCount) return;
+
+    await this.db.query(
+      `INSERT INTO remote_worker_events(worker_id,event_type,payload)
+       VALUES($1,'RESULT_REPORTED',$2::jsonb)`,
+      [workerId, JSON.stringify({ result })],
+    );
   }
 }
