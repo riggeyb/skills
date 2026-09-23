@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { JobQueue } from "./ports.js";
+import type { RenewableJobQueue } from "./ports.js";
 import type { Orchestrator } from "./orchestrator.js";
 
 export interface WorkerLoopOptions {
@@ -10,7 +10,7 @@ export interface WorkerLoopOptions {
 }
 
 export async function runWorkerLoop(
-  queue: JobQueue,
+  queue: RenewableJobQueue,
   orchestrator: Orchestrator,
   options: WorkerLoopOptions = {},
 ): Promise<void> {
@@ -25,19 +25,44 @@ export async function runWorkerLoop(
       continue;
     }
 
+    let leaseLost = false;
+    const heartbeatMs = Math.max(1_000, Math.floor(leaseMs / 3));
+    const heartbeat = setInterval(() => {
+      void queue
+        .renew(job.id, workerId, leaseMs)
+        .then((renewed) => {
+          if (!renewed) leaseLost = true;
+        })
+        .catch((error) => {
+          leaseLost = true;
+          console.error(`[sentient] lease renewal failed for job ${job.id}`, error);
+        });
+    }, heartbeatMs);
+    heartbeat.unref();
+
     try {
       if (job.payload.type === "task.start") {
         await orchestrator.start(job.payload.objective, job.payload.origin);
       } else {
         const exhaustive: never = job.payload;
-        throw new Error(`Unsupported job payload ${(exhaustive as { type?: string }).type ?? "unknown"}`);
+        throw new Error(
+          `Unsupported job payload ${(exhaustive as { type?: string }).type ?? "unknown"}`,
+        );
+      }
+
+      if (leaseLost) {
+        throw new Error(`Lease lost while processing job ${job.id}`);
       }
       await queue.complete(job.id, workerId);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const result = await queue.fail(job.id, workerId, message);
-      const disposition = result.deadLettered ? "dead-lettered" : `retry scheduled at ${result.retryAt}`;
+      const disposition = result.deadLettered
+        ? "dead-lettered"
+        : `retry scheduled at ${result.retryAt}`;
       console.error(`[sentient] job ${job.id} failed: ${message}; ${disposition}`);
+    } finally {
+      clearInterval(heartbeat);
     }
   }
 }
