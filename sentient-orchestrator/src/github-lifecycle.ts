@@ -111,12 +111,46 @@ export class PostgresGitHubLifecycleStore implements GitHubLifecycleStore {
          WHERE installation_id = $1`,
         [id],
       );
+      await client.query(
+        `UPDATE tenant_principals
+         SET active = false, updated_at = now()
+         WHERE installation_id = $1 AND principal_id = 'sentient-reporter'`,
+        [id],
+      );
       return;
+    }
+
+    if (status === "active") {
+      await this.ensureManagedReporter(client, id);
     }
 
     for (const repo of payload.repositories ?? []) {
       await this.upsertRepository(client, id, repo, true);
     }
+  }
+
+  private async ensureManagedReporter(
+    client: PoolClient,
+    installationId: number,
+  ): Promise<void> {
+    await client.query(
+      `INSERT INTO tenant_principals(
+         installation_id, principal_id, principal_type, active, metadata
+       )
+       VALUES ($1, 'sentient-reporter', 'service', true, '{"managed":true}'::jsonb)
+       ON CONFLICT (installation_id, principal_id) DO UPDATE
+       SET principal_type = 'service',
+           active = true,
+           metadata = tenant_principals.metadata || '{"managed":true}'::jsonb,
+           updated_at = now()`,
+      [installationId],
+    );
+    await client.query(
+      `INSERT INTO tenant_role_bindings(installation_id, principal_id, role)
+       VALUES ($1, 'sentient-reporter', 'operator')
+       ON CONFLICT DO NOTHING`,
+      [installationId],
+    );
   }
 
   private async applyRepositories(
