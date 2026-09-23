@@ -1,0 +1,24 @@
+version: 1
+
+agents:
+  max_parallel: 3
+  roles:
+    - backend
+    - frontend
+    - tests
+    - reviewer
+
+models:
+  strategy: cost_optimized
+  allow_escalation: true
+
+collaboration:
+  github_progress: true
+  progress_surface: comments
+
+budget:
+  max_ai_cost_usd: 5
+  max_compute_cost_usd: 2
+
+approval:
+  before_merge: human
