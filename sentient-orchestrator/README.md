@@ -83,6 +83,12 @@ GitHub progress comments
 
 GitHub comments are a progress surface, not the internal message bus. The MVP uses in-memory state so the interfaces can settle before persistence is introduced.
 
+## Lead Sentient control surface
+
+The durable worker control plane now supports a task-scoped Lead Sentient. A Lead acquires a fenced leadership lease, assigns bounded work, issues directives, reviews worker handoffs, requests rework, and marks integration ready only after every required assignment is accepted.
+
+Authoritative Lead commands carry a positive leadership epoch. Reacquiring an expired lease advances the epoch, so commands from an earlier lease are fenced even when the same worker becomes Lead again. Assignment targets are task-bound, handoff reviews are bound to the submitted `handoffId`, and cancelled work remains blocking while it is still marked required.
+
 ## Production gaps intentionally left for the next milestones
 
 1. Replace `InMemoryTaskStore` with Postgres and a durable queue.
