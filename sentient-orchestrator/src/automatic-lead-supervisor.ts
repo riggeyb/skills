@@ -2,6 +2,7 @@ import type { Pool, PoolClient } from "pg";
 import { LeadOrchestrationError, LeadOrchestrationStore, type LeadershipRecord } from "./lead-orchestration.js";
 import type { TaskOrigin, TaskStatus } from "./types.js";
 import { WorkerStore } from "./worker-store.js";
+import { validateHandoff } from "./worker-protocol.js";
 
 const SPECIALISTS = ["backend", "frontend", "tests"] as const;
 type AutomaticRole = "planner" | typeof SPECIALISTS[number] | "reviewer";
