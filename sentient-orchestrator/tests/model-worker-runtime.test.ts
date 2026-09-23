@@ -212,6 +212,7 @@ test("model-backed runtime preserves durable Sentient identity and returns a str
       scheduled.runtime.assign(scheduled.worker.runtimeHandle!, { objective: "tampered assignment" }),
       /assignment_boundary_violation/,
     );
+    await db.query(`UPDATE tasks SET status='completed',updated_at=now() WHERE id=$1`, [scheduled.taskId]);
   } finally {
     await db.end();
   }
@@ -261,6 +262,13 @@ test("model-backed runtime fails closed on private reasoning, tool escape, overs
     assert.equal(restartState.status, "failed");
     assert.equal(restartState.reason, "runtime_restart_unknown_outcome");
     release();
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    await db.query(
+      `UPDATE tasks
+       SET status='failed',updated_at=now()
+       WHERE id = ANY($1::uuid[])`,
+      [[privateRun.taskId, toolRun.taskId, overspendRun.taskId, restartRun.taskId]],
+    );
   } finally {
     await db.end();
   }
@@ -291,9 +299,6 @@ test("automatic Lead supervision routes specialist assignments through model run
       new SupervisedDemoRuntime(["lead-control"]),
       modelRuntime,
     ]);
-    const scheduler = new WorkerScheduler(db, workers, runtimes, `auto-model:${randomUUID()}`, {
-      leaseMs: 60_000,
-    });
     const reconciler = new WorkerRuntimeReconciler(db, workers, runtimes);
     const lead = new AutomaticLeadSupervisor(
       db,
@@ -309,7 +314,7 @@ test("automatic Lead supervision routes specialist assignments through model run
 
     for (let i = 0; i < 100; i++) {
       await lead.tick();
-      await scheduler.tick();
+      await scheduleOneForTask(db, workers, runtimes, task.id);
       await reconciler.tick();
       await lead.tick();
       if ((await tasks.get(task.id)).status === "completed") break;
@@ -347,3 +352,38 @@ test("automatic Lead supervision routes specialist assignments through model run
     await db.end();
   }
 });
+
+
+async function scheduleOneForTask(
+  db: Pool,
+  store: WorkerStore,
+  runtimes: RuntimeRegistry,
+  taskId: string,
+): Promise<void> {
+  const result = await db.query(
+    `SELECT *
+     FROM worker_spawn_requests
+     WHERE task_id=$1
+       AND status IN ('pending','blocked')
+       AND next_attempt_at<=now()
+     ORDER BY created_at,id
+     LIMIT 1`,
+    [taskId],
+  );
+  const request = result.rows[0];
+  if (!request) return;
+  const requirements: RuntimeRequirements = {
+    capabilities: request.required_capabilities ?? [],
+    preferredModelTier: request.preferred_model_tier ?? undefined,
+    maxCostUsd: request.max_cost_usd == null ? undefined : Number(request.max_cost_usd),
+    maxDurationMs: request.max_duration_ms == null ? undefined : Number(request.max_duration_ms),
+    workspaceRequirement: request.workspace_requirement ?? undefined,
+  };
+  const runtime = runtimes.select(requirements);
+  assert.ok(runtime);
+  const worker = await store.create(request, runtime.id, `auto-model:${randomUUID()}`, 60_000);
+  const { handle } = await runtime.spawn(worker, requirements);
+  await store.handle(worker.id, handle);
+  await runtime.assign(handle, worker.assignment);
+  await store.transition(worker.id, "running");
+}
