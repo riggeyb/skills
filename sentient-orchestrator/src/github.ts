@@ -26,7 +26,7 @@ export class GitHubAppTokenProvider {
         headers: {
           Accept: "application/vnd.github+json",
           Authorization: `Bearer ${jwt}`,
-          "X-GitHub-Api-Version": "2022-11-28",
+          "X-GitHub-Api-Version": "2026-03-10",
           "User-Agent": "sentient-orchestrator",
         },
       },
@@ -74,7 +74,7 @@ export class GitHubIssueProgressSink implements ProgressSink {
           Accept: "application/vnd.github+json",
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
-          "X-GitHub-Api-Version": "2022-11-28",
+          "X-GitHub-Api-Version": "2026-03-10",
           "User-Agent": "sentient-orchestrator",
         },
         body: JSON.stringify({ body }),
