@@ -1,0 +1,1 @@
+{"version":2,"operation":"replace-unique","path":"sentient-orchestrator/src/worker-store.ts","expected_source_git_blob_sha":"f8804bb76d14df1f492f51a1e1aed5510b773781","old":"        JSON.stringify(x.requiredCapabilities ?? []),\n","new":"        x.requiredCapabilities ?? [],\n","require_unique":1}
