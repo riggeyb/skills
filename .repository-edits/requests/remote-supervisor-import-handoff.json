@@ -1,0 +1,1 @@
+{"version":2,"operation":"replace-unique","path":"sentient-orchestrator/src/automatic-lead-supervisor.ts","expected_source_git_blob_sha":"ec6e8d41e41d795ad8d4f3cd4dba8276a3939d80","old":"import { WorkerStore } from \"./worker-store.js\";","new":"import { WorkerStore } from \"./worker-store.js\";\nimport { validateHandoff } from \"./worker-protocol.js\";","require_unique":1}
