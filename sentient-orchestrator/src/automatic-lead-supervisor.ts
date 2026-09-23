@@ -12,6 +12,7 @@ export interface AutomaticLeadSupervisorOptions {
   maxAttempts?: number;
   leadCapabilities?: string[];
   workerCapabilities?: string[];
+  allowSyntheticHandoffs?: boolean;
 }
 
 export interface AutomaticLeadTickResult {
