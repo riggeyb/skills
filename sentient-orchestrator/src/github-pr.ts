@@ -47,20 +47,24 @@ export class GitHubPullRequestReporter {
 }
 
 export function validateRefName(value: string): string {
-  const forbidden = /[\x00-\x20~^:?*\[\\]/;
+  const forbidden = new Set(["~", "^", ":", "?", "*", "[", "\\"]);
+  const hasForbiddenCharacter = [...value].some((character) => {
+    const code = character.charCodeAt(0);
+    return code <= 0x20 || code === 0x7f || forbidden.has(character);
+  });
+
   if (
     !value ||
     value.length > 240 ||
     value.startsWith("-") ||
     value.includes("..") ||
     value.includes("@{") ||
-    value.includes("\\") ||
-    forbidden.test(value) ||
     value.endsWith("/") ||
     value.endsWith(".") ||
-    value.includes("//")
+    value.includes("//") ||
+    hasForbiddenCharacter
   ) {
-    throw new Error(${value} is not a valid Git ref`);
+    throw new Error(`Invalid Git ref ${JSON.stringify(value)}`);
   }
   return value;
 }
