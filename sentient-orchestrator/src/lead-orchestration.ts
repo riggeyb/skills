@@ -145,7 +145,7 @@ export class LeadOrchestrationStore{
   async markIntegrationReady(taskId:string,workerId:string,epoch:number){
     const c=await this.db.connect();try{
       await c.query("BEGIN");await this.assertActiveLeadTx(c,taskId,workerId,epoch);
-      const p=await c.query(`SELECT external_id,status FROM worker_assignments WHERE task_id=$1 AND required=true AND status NOT IN('accepted','cancelled')`,[taskId]);
+      const p=await c.query(`SELECT external_id,status FROM worker_assignments WHERE task_id=$1 AND required=true AND status<>'accepted'`,[taskId]);
       if(p.rowCount)throw new LeadOrchestrationError("NOT_READY","required assignments remain");
       await c.query(`UPDATE task_leadership SET integration_ready_at=now(),integration_ready_epoch=$2,updated_at=now() WHERE task_id=$1`,[taskId,epoch]);
       await this.auditTx(c,taskId,"INTEGRATION_READY",workerId,{epoch});await c.query("COMMIT");
