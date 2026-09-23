@@ -29,7 +29,7 @@ export class WorkerStore {
         x.repository.repo,
         x.role,
         JSON.stringify(x.assignment),
-        JSON.stringify(x.requiredCapabilities ?? []),
+        x.requiredCapabilities ?? [],
         x.preferredModelTier ?? null,
         x.maxCostUsd ?? null,
         x.maxDurationMs ?? null,
@@ -101,7 +101,7 @@ export class WorkerStore {
          JOIN sentient_workers w ON w.id=d.depends_on_worker_id
          WHERE d.spawn_request_id=$1`,
         [id],
-      )
+       )
     ).rows;
   }
 
