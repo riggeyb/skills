@@ -18,8 +18,8 @@ async function task(db: Pool) {
 async function worker(db: Pool, taskId: string, role: "lead" | "specialist") {
   const spawn = (await db.query(
     `INSERT INTO worker_spawn_requests(
-       task_id,tenant,repository_owner,repository_name,role,subtask,idempotency_key,correlation_id
-     ) VALUES($1,'tenant-a','riggeyb','skills',$2,'{}'::jsonb,$3,$4) RETURNING id`,
+       task_id,tenant,repository_owner,repository_name,role,subtask,idempotency_key,correlation_id,status
+     ) VALUES($1,'tenant-a','riggeyb','skills',$2,'{}'::jsonb,$3,$4,'scheduled') RETURNING id`,
     [taskId, role, randomUUID(), randomUUID()],
   )).rows[0].id as string;
   return (await db.query(
