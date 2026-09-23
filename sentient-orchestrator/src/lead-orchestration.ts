@@ -75,6 +75,10 @@ export class LeadOrchestrationStore{
         const t=await c.query(`SELECT 1 FROM sentient_workers WHERE id=$1 AND task_id=$2`,[i.targetWorkerId,i.taskId]);
         if(t.rowCount!==1)throw new LeadOrchestrationError("INVALID_TARGET","target worker is outside task");
       }
+      if(i.spawnRequestId){
+        const s=await c.query(`SELECT 1 FROM worker_spawn_requests WHERE id=$1 AND task_id=$2`,[i.spawnRequestId,i.taskId]);
+        if(s.rowCount!==1)throw new LeadOrchestrationError("INVALID_TARGET","spawn request is outside task");
+      }
       const r=await c.query(
         `INSERT INTO worker_assignments(external_id,task_id,lead_worker_id,leadership_epoch,target_worker_id,spawn_request_id,idempotency_key,objective,assignment,acceptance_criteria,dependencies,required)
          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11::jsonb,$12)
