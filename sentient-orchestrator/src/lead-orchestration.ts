@@ -174,10 +174,10 @@ export class LeadSentientService{
     const c=validateWorkerContract(contractInput);if(c.role!=="lead")throw new LeadOrchestrationError("INVALID_LEAD","lead role required");
     const m=validateMessage(messageInput,{contract:c}),required=LEAD_AUTHORITY_BY_MESSAGE[m.type];if(!required)throw new LeadOrchestrationError("UNSUPPORTED_LEAD_COMMAND",m.type);
     assertAuthority(c,required);await this.store.assertContractBinding(c);
-    if(m.type==="ASSIGNMENT"){const p=m.payload as AssignmentPayload;return this.store.assign({taskId:c.taskId,leadWorkerId:c.workerId,epoch:p.leadershipEpoch,externalId:p.assignmentId,idempotencyKey:p.idempotencyKey,targetWorkerId:p.targetWorkerId,spawnRequestId:p.spawnRequestId,objective:p.objective,assignment:p.assignment,acceptanceCriteria:p.acceptanceCriteria,dependencies:p.dependencies,required:p.required})}
-    if(m.type==="DIRECTIVE"){const p=m.payload as DirectivePayload;return this.store.directive({taskId:c.taskId,leadWorkerId:c.workerId,epoch:p.leadershipEpoch,externalId:p.directiveId,idempotencyKey:p.idempotencyKey,assignmentId:p.assignmentId,directiveType:p.directiveType,payload:p.payload})}
-    if(m.type==="REVIEW_DECISION"){const p=m.payload as ReviewDecisionPayload;return this.store.review({taskId:c.taskId,leadWorkerId:c.workerId,epoch:p.leadershipEpoch,assignmentId:p.assignmentId,handoffId:p.handoffId,decision:p.decision,reason:p.reason})}
-    const p=m.payload as IntegrationReadyPayload;return this.store.markIntegrationReady(c.taskId,c.workerId,p.leadershipEpoch);
+    if(m.type==="ASSIGNMENT"){const p=m.payload as unknown as AssignmentPayload;return this.store.assign({taskId:c.taskId,leadWorkerId:c.workerId,epoch:p.leadershipEpoch,externalId:p.assignmentId,idempotencyKey:p.idempotencyKey,targetWorkerId:p.targetWorkerId,spawnRequestId:p.spawnRequestId,objective:p.objective,assignment:p.assignment,acceptanceCriteria:p.acceptanceCriteria,dependencies:p.dependencies,required:p.required})}
+    if(m.type==="DIRECTIVE"){const p=m.payload as unknown as DirectivePayload;return this.store.directive({taskId:c.taskId,leadWorkerId:c.workerId,epoch:p.leadershipEpoch,externalId:p.directiveId,idempotencyKey:p.idempotencyKey,assignmentId:p.assignmentId,directiveType:p.directiveType,payload:p.payload})}
+    if(m.type==="REVIEW_DECISION"){const p=m.payload as unknown as ReviewDecisionPayload;return this.store.review({taskId:c.taskId,leadWorkerId:c.workerId,epoch:p.leadershipEpoch,assignmentId:p.assignmentId,handoffId:p.handoffId,decision:p.decision,reason:p.reason})}
+    const p=m.payload as unknown as IntegrationReadyPayload;return this.store.markIntegrationReady(c.taskId,c.workerId,p.leadershipEpoch);
   }
   async handoff(contractInput:unknown,assignmentId:string,handoff:unknown){
     const c=validateWorkerContract(contractInput);await this.store.assertContractBinding(c);return this.store.submitHandoff(c.taskId,assignmentId,c.workerId,handoff);
