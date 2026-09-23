@@ -1,4 +1,4 @@
-import type { Agent, AgentRole, ProgressSink, Task, TaskOrigin } from "./types.js";
+import type { Agent, AgentRole, ProgressEvent, ProgressSink, Task, TaskOrigin } from "./types.js";
 import { InMemoryTaskStore } from "./store.js";
 import { ModelRouter } from "./model-router.js";
 
@@ -23,14 +23,14 @@ export class Orchestrator {
 
     const roles: AgentRole[] = ["planner", ...PARALLEL_ROLES, "reviewer"];
     let task = this.store.create(objective, origin, roles);
-    await this.progress.publish({ task, headline: "Task queued", detail: objective });
+    await this.publish({ task, headline: "Task queued", detail: objective });
 
     try {
       task = this.store.updateStatus(task.id, "planning");
       await this.runAgent(task.id, "planner");
 
       task = this.store.updateStatus(task.id, "running");
-      await this.progress.publish({
+      await this.publish({
         task,
         headline: "Parallel work started",
         detail: PARALLEL_ROLES.join(", "),
@@ -50,12 +50,12 @@ export class Orchestrator {
       task = this.store.updateStatus(task.id, "completed");
       this.store.addMessage(task.id, "system", "All workstreams completed.");
       task = this.store.get(task.id);
-      await this.progress.publish({ task, headline: "Task completed" });
+      await this.publish({ task, headline: "Task completed" });
       return task;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       task = this.store.updateStatus(task.id, "failed", message);
-      await this.progress.publish({ task, headline: "Task failed", detail: message });
+      await this.publish({ task, headline: "Task failed", detail: message });
       return task;
     }
   }
@@ -69,7 +69,7 @@ export class Orchestrator {
       startedAt: new Date().toISOString(),
     });
     const modelTier = this.router.route(task, role);
-    await this.progress.publish({
+    await this.publish({
       task,
       headline: `${role} started`,
       detail: `model tier: ${modelTier}`,
@@ -91,7 +91,7 @@ export class Orchestrator {
         summary: result.summary,
         completedAt: new Date().toISOString(),
       });
-      await this.progress.publish({
+      await this.publish({
         task,
         headline: `${role} completed`,
         detail: result.summary,
@@ -104,6 +104,15 @@ export class Orchestrator {
         completedAt: new Date().toISOString(),
       });
       throw error;
+    }
+  }
+
+  private async publish(event: ProgressEvent): Promise<void> {
+    try {
+      await this.progress.publish(event);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[sentient] progress publish failed for task ${event.task.id}: ${message}`);
     }
   }
 }
