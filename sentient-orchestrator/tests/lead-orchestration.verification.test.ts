@@ -14,7 +14,7 @@ test("race/takeover increments epoch and fences stale assign/direct/review/readi
  await db.query(`UPDATE task_leadership SET lease_expires_at=now()-interval'1 second' WHERE task_id=$1`,[t]);const n=await s.acquireLeadership(t,neu,60000);assert.equal(n.epoch,e+1);
  await assert.rejects(s.assign({taskId:t,leadWorkerId:old,epoch:e,externalId:"stale",idempotencyKey:randomUUID(),targetWorkerId:w,objective:"x",assignment:{},acceptanceCriteria:[],dependencies:[],required:true}),leadErr("STALE_LEAD"));
  await assert.rejects(s.directive({taskId:t,leadWorkerId:old,epoch:e,externalId:"d",idempotencyKey:randomUUID(),directiveType:"redirect",payload:{}}),leadErr("STALE_LEAD"));
- await s.assign({taskId:t,leadWorkerId:neu,epoch:n.epoch,externalId:"a1",idempotencyKey:randomUUID(),targetWorkerId:w,objective:"x",assignment:{},acceptanceCriteria:[],dependencies:[],required:true});await s.submitHandoff(t,"a1",w,{v:1});
+ await s.assign({taskId:t,leadWorkerId:neu,epoch:n.epoch,externalId:"a1",idempotencyKey:randomUUID(),targetWorkerId:w,objective:"x",assignment:{},acceptanceCriteria:[],dependencies:[],required:true});await s.submitHandoff(t,"a1",w,{handoffId:"h1",v:1});
  await assert.rejects(s.review({taskId:t,leadWorkerId:old,epoch:e,assignmentId:"a1",handoffId:"h1",decision:"accepted"}),leadErr("STALE_LEAD"));await assert.rejects(s.markIntegrationReady(t,old,e),leadErr("STALE_LEAD"));
 }finally{await db.end()}});
 
@@ -22,10 +22,10 @@ test("pending/blocked/handoff/rework gate readiness and rework history survives"
  const t=await task(db,"gate"),l=await worker(db,t,"lead"),w=await worker(db,t,"specialist"),s=new LeadOrchestrationStore(db),lead=await s.acquireLeadership(t,l,60000);
  await s.assign({taskId:t,leadWorkerId:l,epoch:lead.epoch,externalId:"req",idempotencyKey:randomUUID(),targetWorkerId:w,objective:"x",assignment:{},acceptanceCriteria:[],dependencies:[],required:true});assert.equal((await s.integrationStatus(t)).ready,false);
  await db.query(`UPDATE worker_assignments SET status='blocked' WHERE task_id=$1`,[t]);assert.deepEqual((await s.integrationStatus(t)).blockers,["req:blocked"]);
- await db.query(`UPDATE worker_assignments SET status='in_progress' WHERE task_id=$1`,[t]);await s.submitHandoff(t,"req",w,{v:1});assert.deepEqual((await s.integrationStatus(t)).blockers,["req:handed_off"]);
+ await db.query(`UPDATE worker_assignments SET status='in_progress' WHERE task_id=$1`,[t]);await s.submitHandoff(t,"req",w,{handoffId:"h1",v:1});assert.deepEqual((await s.integrationStatus(t)).blockers,["req:handed_off"]);
  await s.review({taskId:t,leadWorkerId:l,epoch:lead.epoch,assignmentId:"req",handoffId:"h1",decision:"rework"});assert.deepEqual((await s.integrationStatus(t)).blockers,["req:rework"]);
  const ev=(await db.query(`SELECT event_type,payload FROM lead_assignment_events WHERE task_id=$1`,[t])).rows;assert.ok(ev.some(x=>x.event_type==="HANDOFF_SUBMITTED"&&x.payload.handoff?.v===1));assert.ok(ev.some(x=>x.event_type==="REWORK_REQUIRED"&&x.payload.handoffId==="h1"));
- await s.submitHandoff(t,"req",w,{v:2});await s.review({taskId:t,leadWorkerId:l,epoch:lead.epoch,assignmentId:"req",handoffId:"h2",decision:"accepted"});assert.equal((await s.integrationStatus(t)).ready,true);
+ await s.submitHandoff(t,"req",w,{handoffId:"h2",v:2});await s.review({taskId:t,leadWorkerId:l,epoch:lead.epoch,assignmentId:"req",handoffId:"h2",decision:"accepted"});assert.equal((await s.integrationStatus(t)).ready,true);
  await db.query(`UPDATE task_leadership SET lease_expires_at=now()-interval'1 second' WHERE task_id=$1`,[t]);assert.equal((await s.integrationStatus(t)).ready,false);
 }finally{await db.end()}});
 
