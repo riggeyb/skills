@@ -40,3 +40,7 @@ export interface JobQueue {
   fail(jobId: string, workerId: string, error: string): Promise<{ deadLettered: boolean; retryAt?: string }>;
   cancel(jobId: string): Promise<boolean>;
 }
+
+export interface RenewableJobQueue extends JobQueue {
+  renew(jobId: string, workerId: string, leaseMs: number): Promise<boolean>;
+}
