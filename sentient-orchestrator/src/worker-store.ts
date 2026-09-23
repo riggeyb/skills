@@ -29,7 +29,7 @@ export class WorkerStore {
         x.repository.repo,
         x.role,
         JSON.stringify(x.assignment),
-        x.requiredCapabilities ?? [],
+        JSON.stringify(x.requiredCapabilities ?? []),
         x.preferredModelTier ?? null,
         x.maxCostUsd ?? null,
         x.maxDurationMs ?? null,
