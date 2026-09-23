@@ -136,7 +136,7 @@ export class LeadOrchestrationStore{
 
   async integrationStatus(taskId:string):Promise<IntegrationStatus>{
     const l=await this.db.query(`SELECT 1 FROM task_leadership WHERE task_id=$1 AND lease_expires_at>now()`,[taskId]);
-    const p=await this.db.query(`SELECT external_id,status FROM worker_assignments WHERE task_id=$1 AND required=true AND status NOT IN('accepted','cancelled') ORDER BY created_at`,[taskId]);
+    const p=await this.db.query(`SELECT external_id,status FROM worker_assignments WHERE task_id=$1 AND required=true AND status<>'accepted' ORDER BY created_at`,[taskId]);
     const pending=p.rows.map(x=>x.external_id as string),blockers=p.rows.filter(x=>["blocked","handed_off","rework"].includes(x.status)).map(x=>`${x.external_id}:${x.status}`);
     if(!l.rowCount)blockers.unshift("no_active_lead");
     return{ready:l.rowCount===1&&pending.length===0,blockers,pendingAssignments:pending};
