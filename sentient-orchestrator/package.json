@@ -1,6 +1,6 @@
 {
   "name": "sentient-orchestrator",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -9,8 +9,10 @@
   "scripts": {
     "dev": "tsx src/server.ts",
     "dev:worker": "tsx src/worker.ts",
+    "dev:reporter": "tsx src/reporter-worker.ts",
     "start": "tsx src/server.ts",
     "worker": "tsx src/worker.ts",
+    "reporter": "tsx src/reporter-worker.ts",
     "migrate": "tsx src/migrate.ts",
     "test": "tsx --test tests/**/*.test.ts",
     "typecheck": "tsc --noEmit"
