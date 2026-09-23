@@ -17,7 +17,6 @@ export const AUTHORITIES: readonly Authority[] = [
 
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
-
 export interface BudgetEnvelope { maxTokens?: number; maxCostUsd?: number; maxDurationSeconds?: number }
 
 export const RESOURCE_TYPES = [
@@ -99,11 +98,7 @@ export interface AssignmentPayload {
   dependencies: string[];
   required: boolean;
 }
-
-export interface AcknowledgementPayload {
-  assignmentId: string;
-}
-
+export interface AcknowledgementPayload { assignmentId: string }
 export interface DirectivePayload {
   leadershipEpoch: number;
   directiveId: string;
@@ -112,7 +107,6 @@ export interface DirectivePayload {
   directiveType: string;
   payload: JsonValue;
 }
-
 export interface ReviewDecisionPayload {
   leadershipEpoch: number;
   assignmentId: string;
@@ -120,10 +114,7 @@ export interface ReviewDecisionPayload {
   decision: "accepted" | "rework" | "rejected";
   reason?: string;
 }
-
-export interface IntegrationReadyPayload {
-  leadershipEpoch: number;
-}
+export interface IntegrationReadyPayload { leadershipEpoch: number }
 
 export interface SentientEnvelope<T = Record<string, unknown>> {
   protocolVersion: typeof SENTIENT_PROTOCOL_VERSION;
@@ -170,7 +161,8 @@ const positiveInt=(v:unknown,f:string):number=>{
   if(typeof v!=="number"||!Number.isInteger(v)||v<=0) fail("MALFORMED",`${f} must be a positive integer`);
   return v;
 };
-const bool=(v:unknown,f:string):boolean => typeof v==="boolean" ? v : fail("MALFORMED",`${f} must be boolean`);
+const bool=(v:unknown,f:string):boolean =>
+  typeof v==="boolean" ? v : fail("MALFORMED",`${f} must be boolean`);
 
 export function negotiateProtocolVersion(peerVersions: readonly string[]): typeof SENTIENT_PROTOCOL_VERSION {
   if(peerVersions.includes(SENTIENT_PROTOCOL_VERSION)) return SENTIENT_PROTOCOL_VERSION;
@@ -179,10 +171,12 @@ export function negotiateProtocolVersion(peerVersions: readonly string[]): typeo
 
 export function validateWorkerContract(input:unknown):WorkerContract {
   const v=obj(input);
-  if(v.protocolVersion!==SENTIENT_PROTOCOL_VERSION) fail("UNSUPORTED_VERSION","unsupported worker contract version");
+  if(v.protocolVersion!==SENTIENT_PROTOCOL_VERSION) fail("UNSUPPORTED_VERSION","unsupported worker contract version");
   for(const f of ["workerId","taskId","tenantId","repositoryId","role","objective","assignment"] as const) str(v[f],f);
   const authority=strings(v.authority,"authority");
-  for(const a cont of authority if(!AUTHORITIES.includes(a as Authority)) fail("UNAUTHORIZED_CAPABILITY",`unknown authority ${a}`);
+  for(const a of authority) {
+    if(!AUTHORITIES.includes(a as Authority)) fail("UNAUTHORIZED_CAPABILITY",`unknown authority ${a}`);
+  }
   for(const f of ["constraints","dependencies","capabilities","allowedTools","completionCriteria","reportingRequirements"] as const) strings(v[f],f);
   if(!Array.isArray(v.resourceClaims)) fail("MALFORMED","resourceClaims must be an array");
   for(const c of v.resourceClaims as unknown[]) {
@@ -191,8 +185,7 @@ export function validateWorkerContract(input:unknown):WorkerContract {
     if(claim.taskId!==v.taskId) fail("CROSS_TASK","resource claim task differs from contract");
     if(claim.tenantId!==v.tenantId) fail("CROSS_TENANT","resource claim tenant differs from contract");
   }
-  const budget=obj
-v.budget);
+  const budget=obj(v.budget);
   for(const f of ["maxTokens","maxCostUsd","maxDurationSeconds"]) {
     if(budget[f]!==undefined && (typeof budget[f]!=="number" || (budget[f] as number)<0)) {
       fail("MALFORMED",`budget.${f} must be non-negative`);
@@ -222,7 +215,6 @@ export function validateResourceClaim(input:unknown):ResourceClaim {
 export function claimIsActive(claim:ResourceClaim,now=new Date()):boolean {
   return !claim.releasedAt && Date.parse(claim.expiresAt)>now.getTime();
 }
-
 export function claimsConflict(a:ResourceClaim,b:ResourceClaim,now=new Date()):boolean {
   if(!claimIsActive(a,now)||!claimIsActive(b,now)) return false;
   if(a.tenantId!==b.tenantId||a.resourceType!==b.resourceType||a.resourceId!==b.resourceId) return false;
@@ -296,6 +288,6 @@ export function validateMessage(input:unknown,context:MessageValidationContext):
     }
   }
   if(v.type==="HANDOFF") validateHandoff(v.payload);
-  validateLeadPayload(v.type as MessageType,payload);
+  validateLeadPayload(v.type as MessageType, payload);
   return input as ProtocolMessage;
 }
