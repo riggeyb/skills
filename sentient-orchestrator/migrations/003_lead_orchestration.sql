@@ -23,6 +23,7 @@ CREATE INDEX IF NOT EXISTS task_leadership_lease_idx
 
 CREATE TABLE IF NOT EXISTS worker_assignments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  external_id text NOT NULL,
   task_id uuid NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
   lead_worker_id uuid NOT NULL REFERENCES sentient_workers(id) ON DELETE RESTRICT,
   leadership_epoch integer NOT NULL CHECK (leadership_epoch > 0),
@@ -40,6 +41,7 @@ CREATE TABLE IF NOT EXISTS worker_assignments (
   last_review jsonb,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(task_id, external_id),
   UNIQUE(task_id, idempotency_key),
   CHECK (status IN (
     'assigned','acknowledged','in_progress','blocked',
@@ -52,6 +54,7 @@ CREATE INDEX IF NOT EXISTS worker_assignments_task_status_idx
 
 CREATE TABLE IF NOT EXISTS lead_directives (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  external_id text NOT NULL,
   task_id uuid NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
   lead_worker_id uuid NOT NULL REFERENCES sentient_workers(id) ON DELETE RESTRICT,
   leadership_epoch integer NOT NULL CHECK (leadership_epoch > 0),
@@ -60,6 +63,7 @@ CREATE TABLE IF NOT EXISTS lead_directives (
   payload jsonb NOT NULL DEFAULT '{}'::jsonb,
   idempotency_key text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(task_id, external_id),
   UNIQUE(task_id, idempotency_key)
 );
 
