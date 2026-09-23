@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS github_deliveries (
 
 CREATE TABLE IF NOT EXISTS tasks (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  delivery_id text NOT NULL UNIQUE,
   objective text NOT NULL,
   status text NOT NULL,
   origin jsonb NOT NULL,
