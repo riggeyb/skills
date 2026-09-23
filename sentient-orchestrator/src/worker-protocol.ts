@@ -54,7 +54,7 @@ export function validateWorkerContract(input:unknown):WorkerContract {
   const authority=strings(v.authority,"authority"); for(const a of authority) if(!AUTHORITIES.includes(a as Authority)) fail("UNAUTHORIZED_CAPABILITY",`unknown authority ${a}`);
   for(const f of ["constraints","dependencies","capabilities","allowedTools","completionCriteria","reportingRequirements"] as const) strings(v[f],f);
   if(!Array.isArray(v.resourceClaims)) fail("MALFORMED","resourceClaims must be an array");
-  for(const c of v.resourceClaims) validateResourceClaim(c);
+  for(const c of v.resourceClaims as unknown[]) validateResourceClaim(c);
   const budget=obj(v.budget); for(const f of ["maxTokens","maxCostUsd","maxDurationSeconds"]) if(budget[f]!==undefined && (typeof budget[f]!=="number" || (budget[f] as number)<0)) fail("MALFORMED",`budget.${f} must be non-negative`);
   obj(v.modelRuntimeRequirements); if(v.deadline!==undefined) date(v.deadline,"deadline");
   return input as WorkerContract;
@@ -94,7 +94,7 @@ export function validateMessage(input:unknown,context:MessageValidationContext):
   if(context.requiredAuthority)assertAuthority(context.contract,context.requiredAuthority);
   if(v.causationId!==undefined){
     const id=str(v.causationId,"causationId"), parent=context.knownMessages?.get(id);
-    if(!parent)fail("UNKNOWN_CAUSAL_PARENT","causal parent not found");
+    if(!parent)return fail("UNKNOWN_CAUSAL_PARENT","causal parent not found");
     if(parent.taskId!==v.taskId||parent.tenantId!==v.tenantId||parent.repositoryId!==v.repositoryId)fail("INVALID_CAUSAL_PARENT","causal parent crosses identity boundary");
   }
   if(v.type==="HANDOFF")validateHandoff(v.payload);
