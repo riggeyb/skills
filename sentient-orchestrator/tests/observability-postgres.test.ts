@@ -83,7 +83,7 @@ test("correlation propagates from GitHub delivery to task-linked records and hea
     const action = await pool.query(
       `INSERT INTO action_runs(task_id, installation_id, repository_owner, repository_name, workflow_name, status)
        VALUES ($1, $2, 'corr-owner', 'corr-repo', 'verify', 'queued')
-       RETTRNING correlation_id`,
+       RETURNING correlation_id`,
       [taskId, installationId],
     );
     assert.equal(action.rows[0].correlation_id, deliveryId);
