@@ -35,10 +35,22 @@ export class LeadOrchestrationStore{
        VALUES($1,$2,1,now()+$3*interval '1 millisecond')
        ON CONFLICT(task_id) DO UPDATE SET
          lead_worker_id=EXCLUDED.lead_worker_id,
-         epoch=CASE WHEN task_leadership.lead_worker_id=EXCLUDED.lead_worker_id THEN task_leadership.epoch ELSE task_leadership.epoch+1 END,
+         epoch=CASE
+           WHEN task_leadership.lead_worker_id=EXCLUDED.lead_worker_id AND task_leadership.lease_expires_at>now()
+             THEN task_leadership.epoch
+           ELSE task_leadership.epoch+1
+         END,
          lease_expires_at=EXCLUDED.lease_expires_at,renewed_at=now(),updated_at=now(),
-         integration_ready_at=CASE WHEN task_leadership.lead_worker_id=EXCLUDED.lead_worker_id THEN task_leadership.integration_ready_at ELSE NULL END,
-         integration_ready_epoch=CASE WHEN task_leadership.lead_worker_id=EXCLUDED.lead_worker_id THEN task_leadership.integration_ready_epoch ELSE NULL END
+         integration_ready_at=CASE
+           WHEN task_leadership.lead_worker_id=EXCLUDED.lead_worker_id AND task_leadership.lease_expires_at>now()
+             THEN task_leadership.integration_ready_at
+           ELSE NULL
+         END,
+         integration_ready_epoch=CASE
+           WHEN task_leadership.lead_worker_id=EXCLUDED.lead_worker_id AND task_leadership.lease_expires_at>now()
+             THEN task_leadership.integration_ready_epoch
+           ELSE NULL
+         END
        WHERE task_leadership.lead_worker_id=EXCLUDED.lead_worker_id OR task_leadership.lease_expires_at<=now()
        RETURNING *`,[taskId,workerId,leaseMs]);
     if(r.rowCount!==1)throw new LeadOrchestrationError("LEADERSHIP_HELD","another active lead owns the task");
