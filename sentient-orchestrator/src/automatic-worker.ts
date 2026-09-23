@@ -3,14 +3,21 @@ import { AutomaticLeadSupervisor } from "./automatic-lead-supervisor.js";
 import { runControlPlaneLoop } from "./control-plane-loop.js";
 import { LeadOrchestrationStore } from "./lead-orchestration.js";
 import { PostgresTaskStore } from "./postgres.js";
+import { RemoteSentientRuntime } from "./remote-sentient-runtime.js";
 import { RenewablePostgresJobQueue } from "./renewable-postgres-queue.js";
 import { SupervisedDemoRuntime } from "./supervised-demo-runtime.js";
 import { TaskBootstrapper } from "./task-bootstrapper.js";
-import { RuntimeRegistry } from "./worker-control.js";
+import { RuntimeRegistry, type WorkerRuntime } from "./worker-control.js";
 import { runWorkerLoop } from "./worker-loop.js";
 import { WorkerRuntimeReconciler } from "./worker-runtime-reconciler.js";
 import { WorkerScheduler, WorkerSupervisor } from "./worker-scheduler.js";
 import { WorkerStore } from "./worker-store.js";
+
+function csv(value: string | undefined, fallback: string[]): string[] {
+  if (!value) return fallback;
+  const entries = value.split(",").map((entry) => entry.trim()).filter(Boolean);
+  return entries.length ? entries : fallback;
+}
 
 const pool = createDatabasePool();
 const queue = new RenewablePostgresJobQueue(pool);
@@ -18,7 +25,30 @@ const tasks = new PostgresTaskStore(pool);
 const bootstrapper = new TaskBootstrapper(tasks);
 
 const workers = new WorkerStore(pool);
-const runtimes = new RuntimeRegistry([new SupervisedDemoRuntime()]);
+const remoteUrl = process.env.SENTIENT_REMOTE_WORKER_URL;
+const remoteCapabilities = csv(process.env.SENTIENT_REMOTE_WORKER_CAPABILITIES, ["remote-worker"]);
+const runtimeList: WorkerRuntime[] = [];
+let workerCapabilities: string[];
+let allowSyntheticHandoffs: boolean;
+
+if (remoteUrl) {
+  runtimeList.push(new SupervisedDemoRuntime(["lead-control"]));
+  runtimeList.push(new RemoteSentientRuntime({
+    baseUrl: remoteUrl,
+    token: process.env.SENTIENT_REMOTE_WORKER_TOKEN,
+    capabilities: remoteCapabilities,
+    timeoutMs: Number(process.env.SENTIENT_REMOTE_WORKER_TIMEOUT_MS ?? 30_000),
+    id: process.env.SENTIENT_REMOTE_WORKER_RUNTIME_ID ?? "remote-http",
+  }));
+  workerCapabilities = remoteCapabilities;
+  allowSyntheticHandoffs = false;
+} else {
+  runtimeList.push(new SupervisedDemoRuntime(["lead-control", "demo-agent"]));
+  workerCapabilities = ["demo-agent"];
+  allowSyntheticHandoffs = true;
+}
+
+const runtimes = new RuntimeRegistry(runtimeList);
 const workerLeaseMs = Number(process.env.WORKER_LEASE_MS ?? 60_000);
 const scheduler = new WorkerScheduler(
   pool,
@@ -42,6 +72,9 @@ const leadSupervisor = new AutomaticLeadSupervisor(
   {
     leaseMs: Number(process.env.LEAD_LEASE_MS ?? 60_000),
     maxAttempts: Number(process.env.WORKER_MAX_ATTEMPTS ?? 3),
+    leadCapabilities: ["lead-control"],
+    workerCapabilities,
+    allowSyntheticHandoffs,
   },
 );
 
