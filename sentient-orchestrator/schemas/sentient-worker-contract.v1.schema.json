@@ -87,7 +87,14 @@
           "sandbox:execute",
           "workers:spawn",
           "workers:cancel",
-          "merge"
+          "merge",
+          "leadership:acquire",
+          "workers:assign",
+          "workers:direct",
+          "coordination:resolve",
+          "handoffs:review",
+          "workers:rework",
+          "integration:ready"
         ]
       }
     },

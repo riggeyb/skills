@@ -1,0 +1,1 @@
+{"version":2,"operation":"replace-unique","path":"sentient-orchestrator/src/worker-protocol.ts","expected_source_git_blob_sha":"67aad0cbd0bd5fb26ebe0968ddf08eacf01f36b8","old":"export interface SentientEnvelope<T = Record<string, unknown>> {","new":"export interface SentientEnvelope<T = unknown> {","require_unique":1}

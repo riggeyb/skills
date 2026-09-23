@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { RenewableJobQueue } from "./ports.js";
-import type { Orchestrator } from "./orchestrator.js";
+import type { TaskOrigin } from "./types.js";
+
+export interface TaskStarter {
+  start(objective: string, origin: TaskOrigin): Promise<unknown>;
+}
 
 export interface WorkerLoopOptions {
   leaseMs?: number;
@@ -11,7 +15,7 @@ export interface WorkerLoopOptions {
 
 export async function runWorkerLoop(
   queue: RenewableJobQueue,
-  orchestrator: Orchestrator,
+  starter: TaskStarter,
   options: WorkerLoopOptions = {},
 ): Promise<void> {
   const workerId = options.workerId ?? `worker-${randomUUID()}`;
@@ -41,23 +45,18 @@ export async function runWorkerLoop(
     heartbeat.unref();
 
     try {
-      await orchestrator.start(job.payload.objective, job.payload.origin);
+      await starter.start(job.payload.objective, job.payload.origin);
 
-      if (leaseLost) {
-        throw new Error(`Lease lost while processing job ${job.id}`);
-      }
+      if (leaseLost) throw new Error(`Lease lost while processing job ${job.id}`);
       await queue.complete(job.id, workerId);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       try {
         const result = await queue.fail(job.id, workerId, message);
-        const disposition = result.deadLettered
-          ? "dead-lettered"
-          : `retry scheduled at ${result.retryAt}`;
+        const disposition = result.deadLettered ? "dead-lettered" : `retry scheduled at ${result.retryAt}`;
         console.error(`[sentient] job ${job.id} failed: ${message}; ${disposition}`);
       } catch (leaseError) {
-        const leaseMessage =
-          leaseError instanceof Error ? leaseError.message : String(leaseError);
+        const leaseMessage = leaseError instanceof Error ? leaseError.message : String(leaseError);
         console.error(
           `[sentient] job ${job.id} failed after losing queue ownership: ${message}; ${leaseMessage}`,
         );
@@ -72,13 +71,9 @@ async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   if (signal?.aborted) return;
   await new Promise<void>((resolve) => {
     const timer = setTimeout(resolve, ms);
-    signal?.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timer);
-        resolve();
-      },
-      { once: true },
-    );
+    signal?.addEventListener("abort", () => {
+      clearTimeout(timer);
+      resolve();
+    }, { once: true });
   });
 }
