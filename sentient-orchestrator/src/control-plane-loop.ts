@@ -3,7 +3,7 @@ import type { AutomaticLeadSupervisor } from "./automatic-lead-supervisor.js";
 import type { WorkerRuntimeReconciler } from "./worker-runtime-reconciler.js";
 
 export interface ControlPlaneLoopOptions {
-  idlePollMs?: number;
+  pollMs?: number;
   signal?: AbortSignal;
 }
 
@@ -14,27 +14,18 @@ export async function runControlPlaneLoop(
   supervisor: WorkerSupervisor,
   options: ControlPlaneLoopOptions = {},
 ): Promise<void> {
-  const idlePollMs = options.idlePollMs ?? 250;
+  const pollMs = options.pollMs ?? 250;
 
   while (!options.signal?.aborted) {
-    let active = false;
     try {
-      const scheduled = await scheduler.tick();
-      active = Boolean(scheduled) || active;
-
-      const reconciled = await reconciler.tick();
-      active = reconciled > 0 || active;
-
-      const leadResult = await lead.tick();
-      active = Boolean(leadResult) || active;
-
-      const recovered = await supervisor.recoverStale();
-      active = recovered > 0 || active;
+      await scheduler.tick();
+      await reconciler.tick();
+      await lead.tick();
+      await supervisor.recoverStale();
     } catch (error) {
       console.error("[sentient] control-plane tick failed", error);
     }
-
-    if (!active) await sleep(idlePollMs, options.signal);
+    await sleep(pollMs, options.signal);
   }
 }
 
