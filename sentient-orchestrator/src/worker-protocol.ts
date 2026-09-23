@@ -116,7 +116,7 @@ export interface ReviewDecisionPayload {
 }
 export interface IntegrationReadyPayload { leadershipEpoch: number }
 
-export interface SentientEnvelope<T = Record<string, unknown>> {
+export interface SentientEnvelope<T = unknown> {
   protocolVersion: typeof SENTIENT_PROTOCOL_VERSION;
   messageId: string;
   taskId: string;
