@@ -1,13 +1,18 @@
 import { createDemoAgents } from "./agents.js";
 import { createDatabasePool } from "./db.js";
-import { ConsoleProgressSink, GitHubAppTokenProvider, GitHubIssueProgressSink } from "./github.js";
+import {
+  ConsoleProgressSink,
+  GitHubAppTokenProvider,
+  GitHubIssueProgressSink,
+} from "./github.js";
 import { ModelRouter } from "./model-router.js";
 import { Orchestrator } from "./orchestrator.js";
-import { PostgresJobQueue, PostgresTaskStore } from "./postgres.js";
+import { PostgresTaskStore } from "./postgres.js";
+import { RenewablePostgresJobQueue } from "./renewable-postgres-queue.js";
 import { runWorkerLoop } from "./worker-loop.js";
 
 const pool = createDatabasePool();
-const queue = new PostgresJobQueue(pool);
+const queue = new RenewablePostgresJobQueue(pool);
 const store = new PostgresTaskStore(pool);
 
 const appId = process.env.GITHUB_APP_ID;
