@@ -5,6 +5,7 @@ import type { TaskStore } from "./ports.js";
 export class InMemoryTaskStore implements TaskStore {
   private readonly tasks = new Map<string, Task>();
   private readonly deliveries = new Set<string>();
+  private readonly taskByDelivery = new Map<string, string>();
 
   async claimDelivery(deliveryId: string): Promise<boolean> {
     if (this.deliveries.has(deliveryId)) return false;
@@ -13,6 +14,9 @@ export class InMemoryTaskStore implements TaskStore {
   }
 
   async create(objective: string, origin: TaskOrigin, roles: AgentRole[]): Promise<Task> {
+    const existingId = this.taskByDelivery.get(origin.deliveryId);
+    if (existingId) return this.get(existingId);
+
     const now = new Date().toISOString();
     const task: Task = {
       id: randomUUID(),
@@ -25,6 +29,7 @@ export class InMemoryTaskStore implements TaskStore {
       updatedAt: now,
     };
     this.tasks.set(task.id, task);
+    this.taskByDelivery.set(origin.deliveryId, task.id);
     return structuredClone(task);
   }
 
