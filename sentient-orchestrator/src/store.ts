@@ -1,17 +1,18 @@
 import { randomUUID } from "node:crypto";
 import type { AgentRole, AgentState, Task, TaskMessage, TaskOrigin, TaskStatus } from "./types.js";
+import type { TaskStore } from "./ports.js";
 
-export class InMemoryTaskStore {
+export class InMemoryTaskStore implements TaskStore {
   private readonly tasks = new Map<string, Task>();
   private readonly deliveries = new Set<string>();
 
-  claimDelivery(deliveryId: string): boolean {
+  async claimDelivery(deliveryId: string): Promise<boolean> {
     if (this.deliveries.has(deliveryId)) return false;
     this.deliveries.add(deliveryId);
     return true;
   }
 
-  create(objective: string, origin: TaskOrigin, roles: AgentRole[]): Task {
+  async create(objective: string, origin: TaskOrigin, roles: AgentRole[]): Promise<Task> {
     const now = new Date().toISOString();
     const task: Task = {
       id: randomUUID(),
@@ -27,13 +28,12 @@ export class InMemoryTaskStore {
     return structuredClone(task);
   }
 
-  get(taskId: string): Task {
-    const task = this.tasks.get(taskId);
-    if (!task) throw new Error(`Unknown task ${taskId}`);
+  async get(taskId: string): Promise<Task> {
+    const task = this.require(taskId);
     return structuredClone(task);
   }
 
-  updateStatus(taskId: string, status: TaskStatus, error?: string): Task {
+  async updateStatus(taskId: string, status: TaskStatus, error?: string): Promise<Task> {
     const task = this.require(taskId);
     task.status = status;
     task.error = error;
@@ -41,7 +41,7 @@ export class InMemoryTaskStore {
     return structuredClone(task);
   }
 
-  updateAgent(taskId: string, role: AgentRole, patch: Partial<AgentState>): Task {
+  async updateAgent(taskId: string, role: AgentRole, patch: Partial<AgentState>): Promise<Task> {
     const task = this.require(taskId);
     const agent = task.agents.find((entry) => entry.role === role);
     if (!agent) throw new Error(`Task ${taskId} has no ${role} agent`);
@@ -50,7 +50,7 @@ export class InMemoryTaskStore {
     return structuredClone(task);
   }
 
-  addMessage(taskId: string, role: AgentRole | "system", body: string): TaskMessage {
+  async addMessage(taskId: string, role: AgentRole | "system", body: string): Promise<TaskMessage> {
     const task = this.require(taskId);
     const message: TaskMessage = {
       id: randomUUID(),
@@ -64,8 +64,8 @@ export class InMemoryTaskStore {
     return structuredClone(message);
   }
 
-  messages(taskId: string): TaskMessage[] {
-    return this.get(taskId).messages;
+  async messages(taskId: string): Promise<TaskMessage[]> {
+    return (await this.get(taskId)).messages;
   }
 
   private require(taskId: string): Task {
