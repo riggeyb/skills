@@ -70,7 +70,7 @@ export class ArtifactStore {
     const data = await this.objects.get(record.objectKey);
     if (!data) throw new Error(`Artifact object ${record.objectKey} is missing`);
     if (sha256(data) !== record.sha256) {
-      throw new Erropˆ Artifact ${record.id} failed SHA-256 verification`);
+      throw new Error(`Artifact ${record.id} failed SHA-256 verification`);
     }
     return data;
   }
