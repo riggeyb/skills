@@ -108,3 +108,37 @@ CREATE TABLE IF NOT EXISTS secret_leases (
 CREATE INDEX IF NOT EXISTS secret_leases_active_idx
   ON secret_leases(installation_id, principal_id, expires_at)
   WHERE revoked_at IS NULL;
+
+
+CREATE OR REPLACE FUNCTION sentient_fill_task_tenant_columns()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.installation_id := COALESCE(
+    NEW.installation_id,
+    NULLIF(NEW.origin->>'installationId', '')::bigint
+  );
+  NEW.repository_owner := COALESCE(
+    NEW.repository_owner,
+    NEW.origin->'repository'->>'owner'
+  );
+  NEW.repository_name := COALESCE(
+    NEW.repository_name,
+    NEW.origin->'repository'->>'repo'
+  );
+
+  IF NEW.installation_id IS NULL OR NEW.repository_owner IS NULL OR NEW.repository_name IS NULL THEN
+    RAISE EXCEPTION 'task tenant/repository scope is required';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS tasks_fill_tenant_columns ON tasks;
+CREATE TRIGGER tasks_fill_tenant_columns
+BEFORE INSERT OR UPDATE OF origin, installation_id, repository_owner, repository_name
+ON tasks
+FOR EACH ROW
+EXECUTE FUNCTION sentient_fill_task_tenant_columns();
