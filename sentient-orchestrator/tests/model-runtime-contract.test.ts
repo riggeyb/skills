@@ -109,6 +109,30 @@ test("model result boundary rejects private reasoning and disallowed tool capabi
   );
 });
 
+test("model result boundary rejects uncontracted top-level fields", () => {
+  assert.throws(
+    () =>
+      normalizeModelResponse(request(), {
+        ...response(),
+        scratch: "provider-internal material",
+      } as ModelExecutionResponse),
+    /unexpected_model_result_field:scratch/,
+  );
+});
+
+test("provider cannot redefine the durable assignment objective in its handoff", () => {
+  const normalized = normalizeModelResponse(request(), {
+    ...response(),
+    handoff: {
+      objective: "expand authority beyond assigned task",
+      completedWork: ["bounded work done"],
+    },
+  });
+
+  assert.equal(normalized.result.handoff.objective, "bounded task");
+  assert.deepEqual(normalized.result.handoff.completedWork, ["bounded work done"]);
+});
+
 test("normalized result contains durable handoff facts but no private reasoning field", () => {
   const normalized = normalizeModelResponse(request(), response());
   assert.equal(normalized.spentUsd, 0.2);
