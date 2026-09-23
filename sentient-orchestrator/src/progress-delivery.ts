@@ -8,6 +8,7 @@ import type {
   PostgresProgressOutbox,
   ProgressDelivery,
 } from "./progress-outbox.js";
+import { SecretRedactor } from "./redaction.js";
 
 export class GitHubProgressDestination {
   constructor(
@@ -69,12 +70,13 @@ export class GitHubProgressDestination {
       method: "POST",
       body: JSON.stringify({
         query:
-          "mutation SentientProgress($discussionId: ID!, $body: String!) {" +
-          " addDiscussionComment(input: {discussionId: $discussionId, body: $body}) {" +
+          "mutation SentientProgress($discussionId: ID!, $body: String!, $clientMutationId: String!) {" +
+          " addDiscussionComment(input: {discussionId: $discussionId, body: $body, clientMutationId: $clientMutationId}) {" +
           " comment { id } } }",
         variables: {
           discussionId: delivery.destinationRef,
           body: delivery.body,
+          clientMutationId: delivery.id,
         },
       }),
     });
@@ -84,7 +86,9 @@ export class GitHubProgressDestination {
     };
     if (body.errors?.length) {
       throw new Error(
-        `GitHub discussion comment failed: ${body.errors.map((error) => error.message ?? "unknown error").join("; ")}`,
+        `GitHub discussion comment failed: ${body.errors
+          .map((error) => error.message ?? "unknown error")
+          .join("; ")}`,
       );
     }
     if (!body.data?.addDiscussionComment?.comment?.id) {
@@ -101,10 +105,12 @@ export async function runProgressReporterLoop(
     leaseMs?: number;
     idlePollMs?: number;
     signal?: AbortSignal;
+    redactor?: SecretRedactor;
   },
 ): Promise<void> {
   const leaseMs = options.leaseMs ?? 60_000;
   const idlePollMs = options.idlePollMs ?? 750;
+  const redactor = options.redactor ?? new SecretRedactor();
 
   while (!options.signal?.aborted) {
     const delivery = await outbox.lease(options.workerId, leaseMs);
@@ -117,7 +123,9 @@ export async function runProgressReporterLoop(
       await destination.deliver(delivery);
       await outbox.complete(delivery.id, options.workerId);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = redactor
+        .redact(error instanceof Error ? error.message : String(error))
+        .slice(0, 8_000);
       const retryAt =
         error instanceof GitHubRateLimitError
           ? error.retryAt
@@ -129,7 +137,9 @@ export async function runProgressReporterLoop(
         retryAt,
       );
       if (result.deadLettered) {
-        console.error(`[sentient] progress delivery ${delivery.id} dead-lettered: ${message}`);
+        console.error(
+          `[sentient] progress delivery ${delivery.id} dead-lettered: ${message}`,
+        );
       }
     }
   }
