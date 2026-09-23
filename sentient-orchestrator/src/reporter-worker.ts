@@ -2,6 +2,11 @@ import { PostgresTenantAuthorizer } from "./authorization.js";
 import { createDatabasePool } from "./db.js";
 import { GitHubAppTokenProvider } from "./github.js";
 import {
+  PostgresServiceHeartbeat,
+  StructuredLogger,
+  startHeartbeatLoop,
+} from "./observability.js";
+import {
   GitHubProgressDestination,
   runProgressReporterLoop,
 } from "./progress-delivery.js";
@@ -18,21 +23,43 @@ const tokens = new GitHubAppTokenProvider(
 const outbox = new PostgresProgressOutbox(pool);
 const authorization = new PostgresTenantAuthorizer(pool);
 const destination = new GitHubProgressDestination(tokens, authorization);
+const workerId = process.env.REPORTER_WORKER_ID || `reporter-${process.pid}`;
+const logger = new StructuredLogger(redactor);
+const heartbeat = new PostgresServiceHeartbeat(pool, "reporter", workerId);
+const heartbeatLoop = startHeartbeatLoop({
+  heartbeat,
+  details: () => ({ workerId, pid: process.pid }),
+});
 const controller = new AbortController();
 
 for (const signal of ["SIGTERM", "SIGINT"] as const) {
   process.once(signal, () => controller.abort());
 }
 
+logger.info({
+  service: "reporter",
+  event: "service.started",
+  details: { workerId, pid: process.pid },
+});
+
 try {
   await runProgressReporterLoop(outbox, destination, {
-    workerId: process.env.REPORTER_WORKER_ID || `reporter-${process.pid}`,
+    workerId,
     leaseMs: numberEnv("REPORTER_LEASE_MS", 60_000),
     idlePollMs: numberEnv("REPORTER_POLL_MS", 750),
     signal: controller.signal,
     redactor,
   });
+} catch (error) {
+  logger.error({
+    service: "reporter",
+    event: "reporter.loop.failed",
+    details: { workerId },
+    error,
+  });
+  throw error;
 } finally {
+  await heartbeatLoop.stop();
   await pool.end();
 }
 
