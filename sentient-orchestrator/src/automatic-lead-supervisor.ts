@@ -205,11 +205,12 @@ export class AutomaticLeadSupervisor {
          wr.status AS request_status,
          latest.id AS worker_id,
          latest.status AS worker_status,
-         latest.attempt_count
+         latest.attempt_count,
+         latest.runtime_result
        FROM worker_assignments wa
        LEFT JOIN worker_spawn_requests wr ON wr.id=wa.spawn_request_id
        LEFT JOIN LATERAL (
-         SELECT id,status,attempt_count
+         SELECT id,status,attempt_count,runtime_result
          FROM sentient_workers sw
          WHERE sw.spawn_request_id=wa.spawn_request_id
          ORDER BY attempt_count DESC,created_at DESC
