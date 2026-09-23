@@ -37,7 +37,7 @@ Automatic mode uses the existing demo runtime unless `MODEL_RUNTIME_ENDPOINT` is
 - `MODEL_RUNTIME_MODEL_ID` (optional)
 - `MODEL_RUNTIME_AUTH_TOKEN` (optional)
 - `MODEL_RUNTIME_CAPABILITIES`
-- `MODDRUNTIME_MODEL_TIERS` (optional)
+- `MODEL_RUNTIME_MODEL_TIERS` (optional)
 
 `lead-control` is kept off the model-backed specialist capability list.
 
