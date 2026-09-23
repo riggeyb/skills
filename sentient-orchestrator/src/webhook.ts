@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import type { Orchestrator } from "./orchestrator.js";
+import type { JobQueue } from "./ports.js";
 
 interface IssueCommentPayload {
   action: string;
@@ -28,8 +28,8 @@ export async function handleGitHubWebhook(input: {
   rawBody: string;
   signature: string;
   webhookSecret: string;
-  orchestrator: Orchestrator;
-}): Promise<{ accepted: boolean; reason?: string }> {
+  queue: JobQueue;
+}): Promise<{ accepted: boolean; reason?: string; jobId?: string }> {
   if (!verifyGitHubSignature(input.rawBody, input.signature, input.webhookSecret)) {
     throw new Error("Invalid GitHub webhook signature");
   }
@@ -44,25 +44,35 @@ export async function handleGitHubWebhook(input: {
   const objective = extractSentientCommand(payload.comment.body);
   if (!objective) return { accepted: false, reason: "no_sentient_command" };
   if (!payload.installation?.id) throw new Error("Webhook is missing GitHub App installation id");
-
   if (!input.deliveryId) throw new Error("Webhook is missing X-GitHub-Delivery");
 
-  void input.orchestrator
-    .start(objective, {
-      repository: {
-        owner: payload.repository.owner.login,
-        repo: payload.repository.name,
+  const enqueued = await input.queue.enqueue(
+    {
+      type: "task.start",
+      objective,
+      origin: {
+        repository: {
+          owner: payload.repository.owner.login,
+          repo: payload.repository.name,
+        },
+        issueNumber: payload.issue.number,
+        installationId: payload.installation.id,
+        deliveryId: input.deliveryId,
+        requestedBy: payload.comment.user.login,
       },
-      issueNumber: payload.issue.number,
-      installationId: payload.installation.id,
-      deliveryId: input.deliveryId,
-      requestedBy: payload.comment.user.login,
-    })
-    .catch((error) => {
-      console.error(`[sentient] task failed for delivery ${input.deliveryId}`, error);
-    });
+    },
+    {
+      idempotencyKey: `github:${input.deliveryId}`,
+      priority: 0,
+      maxAttempts: 5,
+    },
+  );
 
-  return { accepted: true };
+  return {
+    accepted: enqueued.accepted,
+    reason: enqueued.accepted ? undefined : "duplicate_delivery",
+    jobId: enqueued.jobId,
+  };
 }
 
 export function extractSentientCommand(body: string): string | null {

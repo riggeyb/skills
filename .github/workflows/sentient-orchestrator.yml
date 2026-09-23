@@ -1,0 +1,57 @@
+name: Sentient Orchestrator
+
+on:
+  pull_request:
+    paths:
+      - "sentient-orchestrator/**"
+      - ".github/workflows/sentient-orchestrator.yml"
+  push:
+    branches: [main]
+    paths:
+      - "sentient-orchestrator/**"
+      - ".github/workflows/sentient-orchestrator.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sentient
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sentient"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/sentient
+
+    defaults:
+      run:
+        working-directory: sentient-orchestrator
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Apply migrations
+        run: npm run migrate
+      - name: Test
+        run: npm test
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
