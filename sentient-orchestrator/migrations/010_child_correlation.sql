@@ -15,8 +15,8 @@ CREATE TRIGGER model_calls_fill_correlation
 BEFORE INSERT OR UPDATE OF task_id, correlation_id ON model_calls
 FOR EACH ROW EXECUTE FUNCTION sentient_fill_task_child_correlation();
 
-DROP TRIGER IF EXISTS action_runs_fill_correlation ON action_runs;
-CREATE TRIGER action_runs_fill_correlation
+DROP TRIGGER IF EXISTS action_runs_fill_correlation ON action_runs;
+CREATE TRIGGER action_runs_fill_correlation
 BEFORE INSERT OR UPDATE OF task_id, correlation_id ON action_runs
 FOR EACH ROW EXECUTE FUNCTION sentient_fill_task_child_correlation();
 
