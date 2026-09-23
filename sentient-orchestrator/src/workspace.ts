@@ -106,6 +106,7 @@ export function workspaceBranch(taskId: string, agentId: string): string {
 }
 
 export function validateGitRef(ref: string): string {
+  const forbidden = /[\x00-\x20~^:?*\[]/;
   if (
     !ref ||
     ref.length > 240 ||
@@ -113,8 +114,7 @@ export function validateGitRef(ref: string): string {
     ref.includes("..") ||
     ref.includes("@{") ||
     ref.includes("\\") ||
-    ref.includes(" ") ||
-    /[\x00-\x20~^:?*[]/.test(ref) ||
+    forbidden.test(ref) ||
     ref.endsWith("/") ||
     ref.endsWith(".") ||
     ref.includes("//")
