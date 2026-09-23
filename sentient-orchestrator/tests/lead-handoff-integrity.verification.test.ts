@@ -25,7 +25,7 @@ async function worker(db: Pool, taskId: string, role: "lead" | "specialist") {
   return (await db.query(
     `INSERT INTO sentient_workers(
        spawn_request_id,task_id,tenant,repository_owner,repository_name,role,assignment,status,correlation_id
-     ) VALUES($1,$2,'tenant-a','riggeyb','skills',$3,'{}'::jsonb,'running',$4) RETURNINC id`,
+     ) VALUES($1,$2,'tenant-a','riggeyb','skills',$3,'{}'::jsonb,'running',$4) RETURNING id`,
     [spawn, taskId, role, randomUUID()],
   )).rows[0].id as string;
 }
