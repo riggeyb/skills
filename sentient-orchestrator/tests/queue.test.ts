@@ -35,8 +35,22 @@ test("expired leases can be reclaimed and eventually dead-letter", async () => {
   assert.equal(first?.id, enqueued.jobId);
   await new Promise((resolve) => setTimeout(resolve, 1));
 
-  const second = await queue.lease("worker-b", 1000);
+  const second = await queue.lease("worker-b", 10_000);
   assert.equal(second?.id, enqueued.jobId);
   const result = await queue.fail(enqueued.jobId, "worker-b", "boom");
   assert.equal(result.deadLettered, true);
+});
+
+test("renewing a lease prevents another worker from reclaiming the job", async () => {
+  const queue = new InMemoryJobQueue();
+  const enqueued = await queue.enqueue(payload, { idempotencyKey: "heartbeat" });
+  const leased = await queue.lease("worker-a", 2);
+  assert.equal(leased?.id, enqueued.jobId);
+
+  await new Promise((resolve) => setTimeout(resolve, 1));
+  assert.equal(await queue.renew(enqueued.jobId, "worker-a", 5_000), true);
+
+  await new Promise((resolve) => setTimeout(resolve, 2));
+  assert.equal(await queue.lease("worker-b", 5_000), null);
+  await queue.complete(enqueued.jobId, "worker-a");
 });
