@@ -22,7 +22,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git rm -f             .repository-edits/requests/model-worker-store-context-b.json             .repository-edits/requests/model-runtime-handoff-b.json             .repository-edits/requests/model-runtime-test-isolation-b.json             .github/workflows/cleanup-model-runtime-edit-artifacts.yml
+          git rm -f --ignore-unmatch \
+            .repository-edits/requests/model-runtime-handoff-b.json \
+            .repository-edits/requests/model-runtime-test-isolation-b.json \
+            .repository-edits/requests/model-runtime-worker-map-b.json \
+            sentient-orchestrator/tests/model-worker-runtime-z-cleanup.test.ts \
+            .github/workflows/cleanup-model-runtime-edit-artifacts.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Remove temporary model runtime edit artifacts"
