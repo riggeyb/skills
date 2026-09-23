@@ -19,7 +19,7 @@ export class WorkerStore {
          repository_permissions, workspace_requirement, parent_worker_id, coordinator_id,
          idempotency_key, correlation_id, max_attempts
        )
-       VALUES($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10,$11::jsonb,$12::jsonb,$13,$14,$15,$16,$17)
+       VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11::jsonb,$12::jsonb,$13,$14,$15,$16,$17)
        ON CONFLICT(tenant,idempotency_key) DO NOTHING
        RETURNING id`,
       [
