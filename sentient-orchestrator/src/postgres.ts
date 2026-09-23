@@ -24,18 +24,34 @@ export class PostgresTaskStore implements TaskStore {
     try {
       await client.query("BEGIN");
       const taskResult = await client.query(
-        `INSERT INTO tasks(objective, status, origin)
-         VALUES ($1, 'queued', $2::jsonb)
+        `INSERT INTO tasks(delivery_id, objective, status, origin)
+         VALUES ($1, $2, 'queued', $3::jsonb)
+         ON CONFLICT (delivery_id) DO NOTHING
          RETURNING id`,
-        [objective, JSON.stringify(origin)],
+        [origin.deliveryId, objective, JSON.stringify(origin)],
       );
-      const taskId = taskResult.rows[0].id as string;
-      for (const role of roles) {
-        await client.query(
-          `INSERT INTO task_agents(task_id, role, status) VALUES ($1, $2, 'queued')`,
-          [taskId, role],
-        );
+
+      let taskId: string;
+      if (taskResult.rowCount === 1) {
+        taskId = taskResult.rows[0].id as string;
+        for (const role of roles) {
+          await client.query(
+            `INSERT INTO task_agents(task_id, role, status)
+             VALUES ($1, $2, 'queued')
+             ON CONFLICT (task_id, role) DO NOTHING`,
+            [taskId, role],
+          );
+        }
+      } else {
+        const existing = await client.query(`SELECT id FROM tasks WHERE delivery_id = $1`, [
+          origin.deliveryId,
+        ]);
+        if (existing.rowCount !== 1) {
+          throw new Error(`Unable to resolve task for delivery ${origin.deliveryId}`);
+        }
+        taskId = existing.rows[0].id as string;
       }
+
       await client.query("COMMIT");
       return await this.get(taskId);
     } catch (error) {
