@@ -246,8 +246,9 @@ export class AutomaticLeadSupervisor {
       }
 
       if (row.worker_status === "completed" && ["assigned","acknowledged","in_progress","blocked","rework"].includes(row.status)) {
+        const attemptCount = row.attempt_count ?? 1;
         const fallbackHandoff = {
-          handoffId: `worker:${row.worker_id}:attempt:${row.attempt_count ?? 1}`,
+          handoffId: `worker:${row.worker_id}:attempt:${attemptCount}`,
           objective: row.external_id,
           completedWork: ["worker runtime completed assigned work"],
           filesCommitsArtifacts: [],
@@ -258,35 +259,68 @@ export class AutomaticLeadSupervisor {
           risks: [],
           recommendedNextAction: "lead review",
         };
+        const workerRuntime = await this.db.query(
+          `SELECT runtime_id
+           FROM sentient_workers
+           WHERE id=$1 AND task_id=$2 AND attempt_count=$3`,
+          [row.worker_id, task.id, attemptCount],
+        );
+        const runtimeId = workerRuntime.rows[0]?.runtime_id;
+
+        if (runtimeId === "supervised-demo") {
+          await this.leads.submitHandoff(task.id, row.external_id, row.worker_id, fallbackHandoff);
+          await this.leads.review({
+            taskId: task.id,
+            leadWorkerId: leadership.leadWorkerId,
+            epoch: leadership.epoch,
+            assignmentId: row.external_id,
+            handoffId: fallbackHandoff.handoffId,
+            decision: "accepted",
+            reason: "automatic deterministic verification passed",
+          });
+          continue;
+        }
+
         const execution = await this.db.query(
-          `SELECT result
+          `SELECT status,request,result
            FROM worker_runtime_executions
-           WHERE worker_id=$1 AND status='completed'`,
+           WHERE worker_id=$1`,
           [row.worker_id],
         );
-        const runtimeHandoff = execution.rows[0]?.result?.handoff;
-        const handoff =
-          runtimeHandoff && typeof runtimeHandoff === "object" && !Array.isArray(runtimeHandoff)
-            ? runtimeHandoff
-            : fallbackHandoff;
-        const handoffId =
-          typeof handoff.handoffId === "string" && handoff.handoffId.length
-            ? handoff.handoffId
-            : fallbackHandoff.handoffId;
-        await this.leads.submitHandoff(task.id, row.external_id, row.worker_id, {
-          ...handoff,
-          handoffId,
-        });
+        const executionRow = execution.rows[0];
+        const requestIdentity = executionRow?.request?.identity;
+        const requestAssignment = executionRow?.request?.assignment;
+        const runtimeHandoff = executionRow?.result?.handoff;
+        const boundResult =
+          execution.rowCount === 1 &&
+          executionRow.status === "completed" &&
+          requestIdentity &&
+          typeof requestIdentity === "object" &&
+          !Array.isArray(requestIdentity) &&
+          requestIdentity.workerId === row.worker_id &&
+          requestIdentity.taskId === task.id &&
+          Number(requestIdentity.attemptCount) === attemptCount &&
+          requestAssignment &&
+          typeof requestAssignment === "object" &&
+          !Array.isArray(requestAssignment) &&
+          requestAssignment.assignmentId === row.external_id &&
+          runtimeHandoff &&
+          typeof runtimeHandoff === "object" &&
+          !Array.isArray(runtimeHandoff) &&
+          typeof runtimeHandoff.handoffId === "string" &&
+          runtimeHandoff.handoffId.length > 0;
+
+        if (!boundResult) continue;
+
+        await this.leads.submitHandoff(task.id, row.external_id, row.worker_id, runtimeHandoff);
         await this.leads.review({
           taskId: task.id,
           leadWorkerId: leadership.leadWorkerId,
           epoch: leadership.epoch,
           assignmentId: row.external_id,
-          handoffId,
+          handoffId: runtimeHandoff.handoffId,
           decision: "accepted",
-          reason: runtimeHandoff
-            ? "automatic structured runtime handoff accepted"
-            : "automatic deterministic verification passed",
+          reason: "automatic structured runtime handoff accepted",
         });
       }
     }
