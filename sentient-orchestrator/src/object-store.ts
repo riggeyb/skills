@@ -19,7 +19,7 @@ export class RemoteObjectStore implements ObjectStore {
     const response = await this.request(key, {
       method: "PUT",
       headers: { "Content-Type": contentType },
-      body: data,
+      body: toArrayBuffer(data),
     });
     if (!response.ok) throw new Error(`Object store put failed: ${response.status}`);
   }
@@ -72,4 +72,10 @@ export function validateObjectKey(key: string): string {
     throw new Error("Invalid object key");
   }
   return key;
+}
+
+function toArrayBuffer(data: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(data.byteLength);
+  copy.set(data);
+  return copy.buffer;
 }
