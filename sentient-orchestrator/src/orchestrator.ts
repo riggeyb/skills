@@ -17,13 +17,18 @@ export class Orchestrator {
   }
 
   async start(objective: string, origin: TaskOrigin): Promise<Task> {
-    if (!(await this.store.claimDelivery(origin.deliveryId))) {
-      throw new Error(`Duplicate delivery ${origin.deliveryId}`);
-    }
-
     const roles: AgentRole[] = ["planner", ...PARALLEL_ROLES, "reviewer"];
     let task = await this.store.create(objective, origin, roles);
-    await this.publish({ task, headline: "Task queued", detail: objective });
+
+    if (task.status === "completed") {
+      return task;
+    }
+
+    await this.publish({
+      task,
+      headline: task.status === "queued" ? "Task queued" : "Task resumed",
+      detail: objective,
+    });
 
     try {
       task = await this.store.updateStatus(task.id, "planning");
