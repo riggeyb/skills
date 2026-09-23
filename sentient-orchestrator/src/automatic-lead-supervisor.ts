@@ -246,9 +246,8 @@ export class AutomaticLeadSupervisor {
       }
 
       if (row.worker_status === "completed" && ["assigned","acknowledged","in_progress","blocked","rework"].includes(row.status)) {
-        const handoffId = `worker:${row.worker_id}:attempt:${row.attempt_count ?? 1}`;
-        await this.leads.submitHandoff(task.id, row.external_id, row.worker_id, {
-          handoffId,
+        const fallbackHandoff = {
+          handoffId: `worker:${row.worker_id}:attempt:${row.attempt_count ?? 1}`,
           objective: row.external_id,
           completedWork: ["worker runtime completed assigned work"],
           filesCommitsArtifacts: [],
@@ -258,6 +257,25 @@ export class AutomaticLeadSupervisor {
           testsResults: ["runtime reported completed"],
           risks: [],
           recommendedNextAction: "lead review",
+        };
+        const execution = await this.db.query(
+          `SELECT result
+           FROM worker_runtime_executions
+           WHERE worker_id=$1 AND status='completed'`,
+          [row.worker_id],
+        );
+        const runtimeHandoff = execution.rows[0]?.result?.handoff;
+        const handoff =
+          runtimeHandoff && typeof runtimeHandoff === "object" && !Array.isArray(runtimeHandoff)
+            ? runtimeHandoff
+            : fallbackHandoff;
+        const handoffId =
+          typeof handoff.handoffId === "string" && handoff.handoffId.length
+            ? handoff.handoffId
+            : fallbackHandoff.handoffId;
+        await this.leads.submitHandoff(task.id, row.external_id, row.worker_id, {
+          ...handoff,
+          handoffId,
         });
         await this.leads.review({
           taskId: task.id,
@@ -266,7 +284,9 @@ export class AutomaticLeadSupervisor {
           assignmentId: row.external_id,
           handoffId,
           decision: "accepted",
-          reason: "automatic deterministic verification passed",
+          reason: runtimeHandoff
+            ? "automatic structured runtime handoff accepted"
+            : "automatic deterministic verification passed",
         });
       }
     }
