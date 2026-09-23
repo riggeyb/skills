@@ -1,6 +1,6 @@
 {
   "name": "sentient-orchestrator",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "yaml": "^2.8.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
