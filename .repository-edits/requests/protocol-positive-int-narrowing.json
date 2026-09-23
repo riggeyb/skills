@@ -1,0 +1,1 @@
+{"version":2,"operation":"replace-unique","path":"sentient-orchestrator/src/worker-protocol.ts","expected_source_git_blob_sha":"f780056e670e678c2f3bef203dae224770441b4f","old":"  return v;\n];\nconst bool=(v:unknown,f:string):boolean =>","new":"  return v as number;\n];\nconst bool=(v:unknown,f:string):boolean =>","require_unique":1}
