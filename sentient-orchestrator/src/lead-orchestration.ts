@@ -104,6 +104,8 @@ export class LeadOrchestrationStore{
       const x=r.rows[0];
       if(x.target_worker_id!==workerId)throw new LeadOrchestrationError("ASSIGNMENT_OWNERSHIP","worker does not own assignment");
       if(!["assigned","acknowledged","in_progress","blocked","rework"].includes(x.status))throw new LeadOrchestrationError("INVALID_ASSIGNMENT_STATE","assignment cannot be handed off");
+      if(handoff===null||typeof handoff!=="object"||Array.isArray(handoff)||typeof (handoff as {handoffId?:unknown}).handoffId!=="string"||(handoff as {handoffId:string}).handoffId.length===0)
+        throw new LeadOrchestrationError("UNKNOWN_HANDOFF","handoffId is required");
       await c.query(`UPDATE worker_assignments SET status='handed_off',handoff=$2::jsonb,updated_at=now() WHERE id=$1`,[x.id,JSON.stringify(handoff)]);
       await this.event(c,taskId,x.id,x.lead_worker_id,x.leadership_epoch,"HANDOFF_SUBMITTED",`worker:${workerId}`,{handoff});
       await c.query("COMMIT");
