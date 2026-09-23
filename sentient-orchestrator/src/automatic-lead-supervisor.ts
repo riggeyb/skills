@@ -252,27 +252,36 @@ export class AutomaticLeadSupervisor {
       }
 
       if (row.worker_status === "completed" && ["assigned","acknowledged","in_progress","blocked","rework"].includes(row.status)) {
-        const handoffId = `worker:${row.worker_id}:attempt:${row.attempt_count ?? 1}`;
-        await this.leads.submitHandoff(task.id, row.external_id, row.worker_id, {
-          handoffId,
-          objective: row.external_id,
-          completedWork: ["worker runtime completed assigned work"],
-          filesCommitsArtifacts: [],
-          findings: [],
-          unresolvedQuestions: [],
-          dependencies: [],
-          testsResults: ["runtime reported completed"],
-          risks: [],
-          recommendedNextAction: "lead review",
-        });
+        let handoff;
+        if (row.runtime_result !== null && row.runtime_result !== undefined) {
+          handoff = validateHandoff(row.runtime_result);
+        } else {
+          if (!this.allowSyntheticHandoffs) {
+            throw new Error(`Completed worker ${row.worker_id} did not report a Sentient handoff`);
+          }
+          handoff = validateHandoff({
+            handoffId: `worker:${row.worker_id}:attempt:${row.attempt_count ?? 1}`,
+            objective: row.external_id,
+            completedWork: ["worker runtime completed assigned work"],
+            filesCommitsArtifacts: [],
+            findings: [],
+            unresolvedQuestions: [],
+            dependencies: [],
+            testsResults: ["runtime reported completed"],
+            risks: [],
+            recommendedNextAction: "lead review",
+          });
+        }
+
+        await this.leads.submitHandoff(task.id, row.external_id, row.worker_id, handoff);
         await this.leads.review({
           taskId: task.id,
           leadWorkerId: leadership.leadWorkerId,
           epoch: leadership.epoch,
           assignmentId: row.external_id,
-          handoffId,
+          handoffId: handoff.handoffId,
           decision: "accepted",
-          reason: "automatic deterministic verification passed",
+          reason: row.runtime_result ? "remote Sentient handoff validated" : "automatic deterministic verification passed",
         });
       }
     }
