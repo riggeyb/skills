@@ -217,7 +217,7 @@ test("unacknowledged coordination activation retries are bounded and dead-letter
     assert.equal(Number(activation.activation_attempts), 3);
     assert.match(String(activation.last_error), /coordination_ack_retry_exhausted/);
 
-    const delivery = await db.quert(
+    const delivery = await db.query(
       `SELECT state,dead_letter_reason,dead_lettered_at,delivery_attempts
        FROM sentient_coordination_deliveries
        WHERE message_id=$1 AND recipient_worker_id=$2`,
