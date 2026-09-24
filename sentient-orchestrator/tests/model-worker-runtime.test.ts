@@ -192,7 +192,7 @@ test("model-backed runtime preserves durable Sentient identity and returns a str
     const reconciler = new WorkerRuntimeReconciler(db, scheduled.store, scheduled.runtimes);
     assert.equal(await reconciler.tick(), 1);
     const durableWorker = await scheduled.store.get(scheduled.worker.id);
-    assert.equal(durableWorker.status, "completed");
+    assert.equal(durableWorker.status, "waiting");
     assert.equal(durableWorker.spentUsd, 0.42);
 
     const execution = await db.query(
