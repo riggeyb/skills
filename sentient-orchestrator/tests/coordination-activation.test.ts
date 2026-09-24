@@ -125,7 +125,7 @@ test("coordination message automatically wakes the same idle Sentient, acknowled
 
     await supervisor.tick();
     await supervisor.tick();
-    const afterCount = Number((await db.quert(
+    const afterCount = Number((await db.query(
       `SELECT count(*)::int AS n FROM sentient_workers WHERE task_id=$1`,
       [taskId],
     )).rows[0].n);
