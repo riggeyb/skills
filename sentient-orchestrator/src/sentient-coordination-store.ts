@@ -163,6 +163,13 @@ export class SentientCoordinationStore {
     await c.query(
       `UPDATE sentient_coordination_deliveries SET state='acknowledged',acknowledged_at=now()
        WHERE message_id=$1 AND recipient_worker_id=$2`,[messageId,recipient.id]);
+    await c.query(
+      `UPDATE sentient_coordination_activations
+       SET state='completed',claim_owner=NULL,claim_expires_at=NULL,runtime_handle=NULL,
+           completed_at=coalesce(completed_at,now()),updated_at=now()
+       WHERE message_id=$1 AND recipient_worker_id=$2 AND state='pending'`,
+      [messageId,recipient.id],
+    );
     await this.audit(c,recipient.task_id,recipient.id,"COORDINATION_MESSAGE_ACKNOWLEDGED",{messageId});
     return {acknowledged:true as const,alreadyAcknowledged:false};
   }
