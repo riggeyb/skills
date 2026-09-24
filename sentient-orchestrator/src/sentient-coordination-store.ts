@@ -118,7 +118,10 @@ export class SentientCoordinationStore {
     return mapCoordinationMessage(row);
   }
 
-  async deliver(c: PoolClient, recipient: DurableCoordinationWorker, limit: number, afterMs: number): Promise<CoordinationDelivery[]> {
+  async deliver(
+    c: PoolClient, recipient: DurableCoordinationWorker, limit: number, afterMs: number,
+    requiredMessageId?: string,
+  ): Promise<CoordinationDelivery[]> {
     if (TERMINAL.has(recipient.status)) {
       await c.query(
         `UPDATE sentient_coordination_deliveries
@@ -133,7 +136,8 @@ export class SentientCoordinationStore {
          JOIN sentient_coordination_messages m ON m.message_id=d.message_id
          WHERE d.recipient_worker_id=$1 AND d.state IN('pending','delivered') AND d.next_delivery_at<=now()
            AND d.delivery_attempts<d.max_delivery_attempts
-         ORDER BY m.created_at,m.message_id FOR UPDATE OF d SKIP LOCKED LIMIT $2
+         ORDER BY CASE WHEN d.message_id=$4::uuid THEN 0 ELSE 1 END,m.created_at,m.message_id
+         FOR UPDATE OF d SKIP LOCKED LIMIT $2
        ), delivered AS (
          UPDATE sentient_coordination_deliveries d SET
            state='delivered',delivery_attempts=d.delivery_attempts+1,
@@ -145,8 +149,16 @@ export class SentientCoordinationStore {
        )
        SELECT m.*,d.state,d.delivery_attempts,d.first_delivered_at,d.last_delivered_at,d.acknowledged_at
        FROM delivered d JOIN sentient_coordination_messages m ON m.message_id=d.message_id
-       ORDER BY m.created_at,m.message_id`,[recipient.id,limit,afterMs]);
-    return r.rows.map(mapDelivery);
+       ORDER BY CASE WHEN m.message_id=$4::uuid THEN 0 ELSE 1 END,m.created_at,m.message_id`,
+      [recipient.id,limit,afterMs,requiredMessageId??null]);
+    const deliveries=r.rows.map(mapDelivery);
+    if (requiredMessageId && !deliveries.some(d=>d.message.messageId===requiredMessageId)) {
+      throw new CoordinationError(
+        "REQUIRED_MESSAGE_NOT_DELIVERED",
+        "required activation trigger was not available in the bounded inbox",
+      );
+    }
+    return deliveries;
   }
 
   async acknowledge(c: PoolClient, recipient: DurableCoordinationWorker, messageId: string) {
