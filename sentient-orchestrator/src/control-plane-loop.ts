@@ -1,10 +1,12 @@
 import type { WorkerScheduler, WorkerSupervisor } from "./worker-scheduler.js";
 import type { AutomaticLeadSupervisor } from "./automatic-lead-supervisor.js";
+import type { CoordinationActivationSupervisor } from "./coordination-activation-supervisor.js";
 import type { WorkerRuntimeReconciler } from "./worker-runtime-reconciler.js";
 
 export interface ControlPlaneLoopOptions {
   pollMs?: number;
   signal?: AbortSignal;
+  coordinationActivation?: CoordinationActivationSupervisor;
 }
 
 export async function runControlPlaneLoop(
@@ -21,6 +23,7 @@ export async function runControlPlaneLoop(
       await scheduler.tick();
       await reconciler.tick();
       await lead.tick();
+      await options.coordinationActivation?.tick();
       await supervisor.recoverStale();
     } catch (error) {
       console.error("[sentient] control-plane tick failed", error);
