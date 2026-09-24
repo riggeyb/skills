@@ -51,7 +51,11 @@ export class WorkerRuntimeReconciler {
         );
       }
       if (state.status === "completed") {
-        await this.store.transition(worker.id, "completed");
+        if (worker.runtimeId === "model-backed" && worker.role !== "lead") {
+          await this.store.waitForCoordination(worker.id);
+        } else {
+          await this.store.transition(worker.id, "completed");
+        }
         changed++;
         continue;
       }
