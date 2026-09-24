@@ -100,7 +100,7 @@ test("QUESTION wakes A, A ACKs siblings and sends ANSWER, then B wakes and ACKs 
         if (request.identity.workerId === workerB.id) {
           bCalls++;
           const triggerMessageId = request.coordinationActivation?.triggerMessageId;
-          assert.ok(trigggerMessageId);
+          if (!triggerMessageId) throw new Error("missing_answer_trigger");
           const trigger = pending.find((delivery) => delivery.message.messageId === triggerMessageId);
           assert.ok(trigger);
           assert.equal(trigger.message.type, "ANSWER");
@@ -200,3 +200,4 @@ test("QUESTION wakes A, A ACKs siblings and sends ANSWER, then B wakes and ACKs 
     await db.end();
   }
 });
+
