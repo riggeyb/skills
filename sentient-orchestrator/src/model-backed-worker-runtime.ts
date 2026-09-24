@@ -218,8 +218,8 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
         signal: controller.signal,
         coordination: prepared.channel,
       });
-      await applyModelCoordinationActions(prepared.channel, response);
       const { result, spentUsd } = normalizeModelResponse(prepared.request, response);
+      await applyModelCoordinationActions(prepared.channel, response);
       const status = result.status;
       const reason = status === "failed" ? result.failureReason ?? "model_execution_failed" : null;
       await this.db.query(
