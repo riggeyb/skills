@@ -3,6 +3,7 @@ import type { Pool } from "pg";
 import type {
   RuntimeRequirements,
   SentientWorker,
+  WorkerActivationRequest,
   WorkerRuntime,
   WorkerRuntimeState,
 } from "./worker-control.js";
@@ -19,6 +20,7 @@ import {
   applyModelCoordinationActions,
   prepareModelCoordination,
 } from "./model-coordination.js";
+import { ModelCoordinationActivationRuntime } from "./model-coordination-activation-runtime.js";
 import type { SentientCoordinationService } from "./sentient-coordination.js";
 
 interface ActiveExecution {
@@ -29,12 +31,15 @@ interface ActiveExecution {
 export class ModelBackedWorkerRuntime implements WorkerRuntime {
   readonly id = "model-backed";
   private readonly active = new Map<string, ActiveExecution>();
+  private readonly coordinationActivations: ModelCoordinationActivationRuntime;
 
   constructor(
     private readonly db: Pool,
     private readonly adapters: ModelExecutionAdapterRegistry,
     private readonly coordination?: SentientCoordinationService,
-  ) {}
+  ) {
+    this.coordinationActivations = new ModelCoordinationActivationRuntime(db, adapters, coordination);
+  }
 
   compatible(requirements: RuntimeRequirements): boolean {
     return this.adapters.select(requirements) !== null;
