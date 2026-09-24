@@ -112,6 +112,7 @@ try {
     runControlPlaneLoop(scheduler, runtimeReconciler, leadSupervisor, workerSupervisor, {
       pollMs: Number(process.env.CONTROL_PLANE_POLL_MS ?? 250),
       signal: controller.signal,
+      coordinationActivation,
     }),
   ]);
 } finally {
