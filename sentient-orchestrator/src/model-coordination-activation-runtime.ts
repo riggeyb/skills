@@ -277,7 +277,7 @@ export class ModelCoordinationActivationRuntime {
       `UPDATE worker_coordination_runtime_executions
        SET status='failed',failure_reason='runtime_restart_unknown_outcome',
            completed_at=now(),updated_at=now()
-       WHERE runtime_handle=$1 AND status='running'`,
+       WHERE runtime_handle=$1 AND status IN('starting','running')`,
       [handle],
     );
   }
