@@ -177,7 +177,7 @@ export class ModelCoordinationActivationRuntime {
       (execution.status === "starting" || execution.status === "running") &&
       !this.active.has(handle)
     ) {
-      await this.failUnkownInFlight(handle);
+      await this.failUnknownInFlight(handle);
       execution = await this.loadExecution(handle);
     }
     return {
