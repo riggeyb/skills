@@ -73,6 +73,16 @@ export class CoordinationActivationSettlementStore{
          WHERE a.activation_id=$1 FOR UPDATE OF a`,[activationId]);
       if(r.rowCount!==1){await c.query("ROLLBACK");return}
       const row=r.rows[0];
+      if(row.state==="running"&&row.runtime_handle){
+        await c.query(
+          `UPDATE sentient_workers
+           SET status=CASE WHEN status='running' AND runtime_handle=$2 THEN 'waiting' ELSE status END,
+               runtime_handle=CASE WHEN runtime_handle=$2 THEN NULL ELSE runtime_handle END,
+               lease_owner=CASE WHEN runtime_handle=$2 THEN NULL ELSE lease_owner END,
+               lease_expires_at=CASE WHEN runtime_handle=$2 THEN NULL ELSE lease_expires_at END
+           WHERE id=$1`,
+          [row.recipient_worker_id,row.runtime_handle]);
+      }
       if(forceDeadLetter||Number(row.activation_attempts)>=Number(row.max_activation_attempts)){
         await deadLetterCoordinationDeliveryTx(c,row.message_id,row.recipient_worker_id,row.task_id,reason);
       }else{
