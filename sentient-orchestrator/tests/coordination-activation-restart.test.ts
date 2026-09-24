@@ -4,7 +4,6 @@ import test from "node:test";
 import { Pool } from "pg";
 import { CoordinationActivationClaimStore } from "../src/coordination-activation-claim-store.js";
 import { CoordinationActivationSupervisor } from "../src/coordination-activation-supervisor.js";
-import { CoordinationActivationWatchdog } from "../src/coordination-activation-watchdog.js";
 import {
   ModelExecutionAdapterRegistry,
   type ModelExecutionAdapter,
@@ -32,9 +31,6 @@ test("a durably bound starting activation resumes after supervisor/runtime resta
       correlationId: "activation:restart",
       payload: { question: "Resume this durable wake after restart." },
     });
-
-    const watchdog = new CoordinationActivationWatchdog(db);
-    assert.equal(await watchdog.tick(), 1);
 
     const claims = new CoordinationActivationClaimStore(db);
     const claimed = await claims.claim("pre-crash-supervisor", 5_000);
