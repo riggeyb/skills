@@ -15,6 +15,11 @@ import {
   ModelBudgetExceededError,
   normalizeModelResponse,
 } from "./model-runtime-validation.js";
+import {
+  applyModelCoordinationActions,
+  prepareModelCoordination,
+} from "./model-coordination.js";
+import type { SentientCoordinationService } from "./sentient-coordination.js";
 
 interface ActiveExecution {
   controller: AbortController;
