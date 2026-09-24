@@ -170,7 +170,18 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
     this.active.set(handle, { controller, promise });
   }
 
+  async activate(
+    worker: SentientWorker,
+    requirements: RuntimeRequirements,
+    activation: WorkerActivationRequest,
+  ): Promise<{ handle: string }> {
+    return this.coordinationActivations.activate(worker, requirements, activation);
+  }
+
   async inspect(handle: string): Promise<WorkerRuntimeState> {
+    if (this.coordinationActivations.owns(handle)) {
+      return this.coordinationActivations.inspect(handle);
+    }
     let execution = await this.loadExecution(handle);
     if (execution.status === "running" && !this.active.has(handle)) {
       await this.failUnknownInFlight(handle);
@@ -185,6 +196,10 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
   }
 
   async cancel(handle: string, reason: string): Promise<void> {
+    if (this.coordinationActivations.owns(handle)) {
+      await this.coordinationActivations.cancel(handle, reason);
+      return;
+    }
     this.active.get(handle)?.controller.abort();
     await this.db.query(
       `UPDATE worker_runtime_executions
@@ -195,6 +210,10 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
   }
 
   async terminate(handle: string, reason: string): Promise<void> {
+    if (this.coordinationActivations.owns(handle)) {
+      await this.coordinationActivations.terminate(handle, reason);
+      return;
+    }
     this.active.get(handle)?.controller.abort();
     await this.db.query(
       `UPDATE worker_runtime_executions
