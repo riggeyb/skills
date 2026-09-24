@@ -100,6 +100,7 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
           "handoff",
           "failureReason",
           "usage",
+          "coordinationActions",
         ],
       },
     };
