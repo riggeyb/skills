@@ -284,9 +284,16 @@ export class WorkerStore {
   async stale() {
     return (
       await this.db.query(
-        `SELECT * FROM sentient_workers
-         WHERE status IN('starting','running','blocked','waiting')
-           AND lease_expires_at<=now()`,
+        `SELECT w.* FROM sentient_workers w
+         WHERE w.status IN('starting','running','blocked','waiting')
+           AND w.lease_expires_at<=now()
+           AND NOT EXISTS (
+             SELECT 1
+             FROM sentient_coordination_activations a
+             WHERE a.recipient_worker_id=w.id
+               AND a.state='running'
+               AND a.runtime_handle=w.runtime_handle
+           )`,
       )
     ).rows.map(map);
   }
