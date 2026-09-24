@@ -25,7 +25,7 @@ The runtime re-reads the durable worker row before dispatch so repository, capab
 
 ## Lead authority
 
-The model runtime never acquires Lead authority. Lead workers remain on the existing supervised runtime. Specialist completion contributes a structured durable handoff, which `AutomaticLeadSupervisor` submits through the existing fenced Lead review path. Leadership epoch checks and final acceptance remain authoritative.
+The model runtime never acquires Lead authority. Lead workers remain on the existing supervised runtime. Specialist completion contributes a structured durable handoff, which `AutomaticLeadSupervisor` submits through the existing fenced Lead review path. Leadership epoch checks and final acceptance remain authoritative. For non-demo workers, `AutomaticLeadSupervisor` accepts completion only when a durable `worker_runtime_executions` record is completed and bound to the same worker, task, attempt, and assignment and contains a structured handoff. The deterministic fallback handoff is reserved for `supervised-demo`; missing or mismatched model execution evidence is never auto-accepted.
 
 ## Configuration
 
