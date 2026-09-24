@@ -102,6 +102,14 @@ export class SentientCoordinationStore {
       await c.query(
         `INSERT INTO sentient_coordination_deliveries(message_id,recipient_worker_id)
          VALUES($1,$2) ON CONFLICT DO NOTHING`, [messageId,x.id]);
+      await c.query(
+        `INSERT INTO sentient_coordination_activations(
+           activation_id,message_id,recipient_worker_id
+         )
+         VALUES('coord:' || $1::text || ':' || $2::text,$1,$2)
+         ON CONFLICT(message_id,recipient_worker_id) DO NOTHING`,
+        [messageId,x.id],
+      );
     }
     if (r.rowCount) await this.audit(c,sender.task_id,sender.id,"COORDINATION_MESSAGE_SENT",{
       messageId,type:draft.type,targetKind:draft.target.kind,recipients:recipients.map(x=>x.id),
