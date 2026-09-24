@@ -132,7 +132,7 @@ export class SentientCoordinationStore {
          FROM sentient_coordination_deliveries d
          JOIN sentient_coordination_messages m ON m.message_id=d.message_id
          WHERE d.recipient_worker_id=$1 AND d.state IN('pending','delivered') AND d.next_delivery_at<=now()
-           AND d.delivery_attempts<dd.max_delivery_attempts
+           AND d.delivery_attempts<d.max_delivery_attempts
          ORDER BY m.created_at,m.message_id FOR UPDATE OF d SKIP LOCKED LIMIT $2
        ), delivered AS (
          UPDATE sentient_coordination_deliveries d SET
