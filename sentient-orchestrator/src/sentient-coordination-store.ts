@@ -106,7 +106,7 @@ export class SentientCoordinationStore {
         `INSERT INTO sentient_coordination_activations(
            activation_id,message_id,recipient_worker_id
          )
-         VALUES('coord:' || $1::text || ':' || $2::text,$1,$2)
+         VALUES('coord:' || $1::text || ':' || $2::text,$1::uuid,$2::uuid)
          ON CONFLICT(message_id,recipient_worker_id) DO NOTHING`,
         [messageId,x.id],
       );
