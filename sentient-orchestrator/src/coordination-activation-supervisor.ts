@@ -151,9 +151,9 @@ export class CoordinationActivationSupervisor {
       const reason = error instanceof Error ? error.message : String(error);
       const forceDeadLetter =
         reason.includes("budget") ||
-        reason.includes("capability_boundary" ||
+        reason.includes("capability_boundary") ||
         reason.includes("identity_boundary") ||
-        reason.includes("repository_boundary";
+        reason.includes("repository_boundary");
       await this.settlements.fail(
         activation.activation_id,
         reason,
