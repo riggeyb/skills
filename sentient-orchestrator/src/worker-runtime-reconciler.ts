@@ -41,6 +41,15 @@ export class WorkerRuntimeReconciler {
       if (!runtime) continue;
 
       const state = await runtime.inspect(worker.runtimeHandle);
+      if (state.spentUsd !== undefined) {
+        if (!Number.isFinite(state.spentUsd) || state.spentUsd < 0) {
+          throw new Error("runtime_reported_invalid_spend");
+        }
+        await this.db.query(
+          `UPDATE sentient_workers SET spent_usd=greatest(spent_usd,$2) WHERE id=$1`,
+          [worker.id, state.spentUsd],
+        );
+      }
       if (state.status === "completed") {
         await this.store.transition(worker.id, "completed");
         changed++;
