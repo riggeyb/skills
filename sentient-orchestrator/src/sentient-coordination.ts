@@ -59,15 +59,17 @@ export class SentientCoordinationService {
 
   async inbox(actor: CoordinationActor, options: CoordinationInboxOptions={}): Promise<CoordinationDelivery[]> {
     const limit=options.limit??50, afterMs=options.redeliveryAfterMs??30_000;
+    const requiredMessageId=options.requiredMessageId;
     if (!Number.isInteger(limit)||limit<=0||limit>500)
       throw new CoordinationError("INVALID_INBOX_LIMIT","limit must be between 1 and 500");
     if (!Number.isFinite(afterMs)||afterMs<0)
       throw new CoordinationError("INVALID_REDELIVERY_WINDOW","redeliveryAfterMs must be non-negative");
+    if (requiredMessageId) assertUuid(requiredMessageId,"requiredMessageId");
     const c=await this.store.db.connect();
     try {
       await c.query("BEGIN");
       const recipient=await this.store.actor(c,actor);
-      const messages=await this.store.deliver(c,recipient,limit,afterMs);
+      const messages=await this.store.deliver(c,recipient,limit,afterMs,requiredMessageId);
       await c.query("COMMIT");
       return messages;
     } catch(error) {
