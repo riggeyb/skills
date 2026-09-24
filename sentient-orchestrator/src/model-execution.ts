@@ -26,6 +26,11 @@ export interface ModelExecutionRequest {
   idempotencyKey: string;
   identity: ModelExecutionIdentity;
   assignment: unknown;
+  coordinationActivation?: {
+    activationId: string;
+    triggerMessageId: string;
+    activationAttempt: number;
+  };
   boundaries: {
     capabilities: string[];
     authority: Record<string, unknown>;
