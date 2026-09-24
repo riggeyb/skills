@@ -189,7 +189,7 @@ test("coordination rejects spoofing, cross-boundary injection, private reasoning
       /tenant boundary violation/,
     );
 
-    const repoMismatch = await createWorker(db, f.taskId, f.tenant, "reviewer", { owner: "other", repo": "repo" });
+    const repoMismatch = await createWorker(db, f.taskId, f.tenant, "reviewer", { owner: "other", repo: "repo" });
     await assert.rejects(
       service.send(f.workerA, {
         target: { kind: "worker", workerId: repoMismatch.workerId },
