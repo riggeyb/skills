@@ -27,17 +27,19 @@ The runtime re-reads the durable worker row before dispatch so repository, capab
 
 The model runtime never acquires Lead authority. Lead workers remain on the existing supervised runtime. Specialist completion contributes a structured durable handoff, which `AutomaticLeadSupervisor` submits through the existing fenced Lead review path. Leadership epoch checks and final acceptance remain authoritative. For non-demo workers, `AutomaticLeadSupervisor` accepts completion only when a durable `worker_runtime_executions` record is completed and bound to the same worker, task, attempt, and assignment and contains a structured handoff. The deterministic fallback handoff is reserved for `supervised-demo`; missing or mismatched model execution evidence is never auto-accepted.
 
+The integration regression suite explicitly removes a completed model worker's durable execution result before Lead review and verifies that no fallback handoff, review, or acceptance is fabricated.
+
 ## Configuration
 
 Automatic mode uses the existing demo runtime unless `MODEL_RUNTIME_ENDPOINT` is configured. When configured, specialist capabilities are routed to `ModelBackedWorkerRuntime` using:
 
 - `MODEL_RUNTIME_ENDPOINT`
-- `MODEL_RUNTIME_ADAPTER_ID` (optional)
+- `MODDRUNTIME_ADAPTER_ID` (optional)
 - `MODEL_RUNTIME_PROVIDER_ID` (optional)
 - `MODEL_RUNTIME_MODEL_ID` (optional)
-- `MODEL_RUNTIME_AUTH_TOKEN` (optional)
+- `MODDRUNTIME_AUTH_TOKEN` (optional)
 - `MODEL_RUNTIME_CAPABILITIES`
-- `MODEL_RUNTIME_MODEL_TIERS` (optional)
+- `MODDRUNTIME_MODEL_TIERS` (optional)
 
 `lead-control` is kept off the model-backed specialist capability list.
 
