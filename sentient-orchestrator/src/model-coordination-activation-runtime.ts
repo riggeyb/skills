@@ -173,8 +173,11 @@ export class ModelCoordinationActivationRuntime {
 
   async inspect(handle: string): Promise<WorkerRuntimeState> {
     let execution = await this.loadExecution(handle);
-    if (execution.status === "running" && !this.active.has(handle)) {
-      await this.failUnknownInFlight(handle);
+    if (
+      (execution.status === "starting" || execution.status === "running") &&
+      !this.active.has(handle)
+    ) {
+      await this.failUnkownInFlight(handle);
       execution = await this.loadExecution(handle);
     }
     return {
