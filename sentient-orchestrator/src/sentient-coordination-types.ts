@@ -51,6 +51,7 @@ export interface CoordinationDelivery {
 export interface CoordinationInboxOptions {
   limit?: number;
   redeliveryAfterMs?: number;
+  requiredMessageId?: string;
 }
 
 export interface CoordinationAck {
