@@ -208,6 +208,39 @@ export class WorkerStore {
     return this.transition(id, "starting");
   }
 
+  async waitForCoordination(id: string, reason = "runtime_completed"): Promise<SentientWorker> {
+    const client = await this.db.connect();
+    try {
+      await client.query("BEGIN");
+      const current = await client.query(
+        `SELECT * FROM sentient_workers WHERE id=$1 FOR UPDATE`,
+        [id],
+      );
+      if (!current.rowCount) throw new Error("Unknown worker");
+      assertWorkerTransition(current.rows[0].status, "waiting");
+      const result = await client.query(
+        `UPDATE sentient_workers
+         SET status='waiting',
+             runtime_handle=NULL,
+             lease_owner=NULL,
+             lease_expires_at=NULL,
+             last_heartbeat_at=now()
+         WHERE id=$1
+         RETURNING *`,
+        [id],
+      );
+      await client.query("COMMIT");
+      const worker = map(result.rows[0]);
+      await this.event(worker.taskId, "WORKER_WAITING", worker.id, { reason });
+      return worker;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async heartbeat(id: string, owner: string, ms = 60_000, spent?: number) {
     const result = await this.db.query(
       `UPDATE sentient_workers
