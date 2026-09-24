@@ -1,0 +1,1 @@
+{"version":2,"operation":"insert-after-unique","path":"sentient-orchestrator/src/automatic-worker.ts","expected_source_git_blob_sha":"28a3d512a3c582425184115320433a821312713a","anchor":"import { AutomaticLeadSupervisor } from \"./automatic-lead-supervisor.js\";","insertion":"\nimport { CoordinationActivationSupervisor } from \"./coordination-activation-supervisor.js\";"}
