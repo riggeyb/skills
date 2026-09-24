@@ -1,0 +1,1 @@
+{"version":2,"operation":"insert-after-unique","path":"sentient-orchestrator/src/automatic-worker.ts","expected_source_git_blob_sha":"4b059ab31353659c7044bea4b005fa599cd1d89c","anchor":"import { ModelBackedWorkerRuntime } from \"./model-backed-worker-runtime.js\";","insertion":"\nimport { SentientCoordinationService } from \"./sentient-coordination.js\";"}

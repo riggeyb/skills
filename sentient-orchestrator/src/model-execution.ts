@@ -2,6 +2,11 @@ import type {
   RuntimeRequirements,
   WorkerExecutionResult,
 } from "./worker-control.js";
+import type {
+  ModelCoordinationAction,
+  ModelCoordinationInput,
+  SentientCoordinationChannel,
+} from "./sentient-coordination-types.js";
 
 export interface ModelExecutionIdentity {
   workerId: string;
@@ -28,6 +33,7 @@ export interface ModelExecutionRequest {
     budgetUsd?: number;
     maxDurationMs?: number;
   };
+  coordination?: ModelCoordinationInput;
   responseContract: {
     version: "sentient-worker-result/v1";
     privateReasoningForbidden: true;
@@ -39,7 +45,8 @@ export interface ModelExecutionRequest {
       "toolResults",
       "handoff",
       "failureReason",
-      "usage"
+      "usage",
+      "coordinationActions"
     ];
   };
 }
@@ -53,10 +60,12 @@ export interface ModelExecutionUsage {
 export interface ModelExecutionResponse extends Omit<WorkerExecutionResult, "handoff"> {
   handoff?: Partial<WorkerExecutionResult["handoff"]>;
   usage?: ModelExecutionUsage;
+  coordinationActions?: ModelCoordinationAction[];
 }
 
 export interface ModelExecutionContext {
   signal: AbortSignal;
+  coordination?: SentientCoordinationChannel;
 }
 
 export interface ModelExecutionAdapter {

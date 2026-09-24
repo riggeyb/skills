@@ -15,6 +15,11 @@ import {
   ModelBudgetExceededError,
   normalizeModelResponse,
 } from "./model-runtime-validation.js";
+import {
+  applyModelCoordinationActions,
+  prepareModelCoordination,
+} from "./model-coordination.js";
+import type { SentientCoordinationService } from "./sentient-coordination.js";
 
 interface ActiveExecution {
   controller: AbortController;
@@ -28,6 +33,7 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
   constructor(
     private readonly db: Pool,
     private readonly adapters: ModelExecutionAdapterRegistry,
+    private readonly coordination?: SentientCoordinationService,
   ) {}
 
   compatible(requirements: RuntimeRequirements): boolean {
@@ -94,6 +100,7 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
           "handoff",
           "failureReason",
           "usage",
+          "coordinationActions",
         ],
       },
     };
@@ -206,8 +213,13 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
         }, request.boundaries.maxDurationMs)
       : undefined;
     try {
-      const response = await adapter.execute(request, { signal: controller.signal });
-      const { result, spentUsd } = normalizeModelResponse(request, response);
+      const prepared = await prepareModelCoordination(this.coordination, request);
+      const response = await adapter.execute(prepared.request, {
+        signal: controller.signal,
+        coordination: prepared.channel,
+      });
+      const { result, spentUsd } = normalizeModelResponse(prepared.request, response);
+      await applyModelCoordinationActions(prepared.channel, response);
       const status = result.status;
       const reason = status === "failed" ? result.failureReason ?? "model_execution_failed" : null;
       await this.db.query(

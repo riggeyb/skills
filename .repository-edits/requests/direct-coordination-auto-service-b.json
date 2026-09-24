@@ -1,0 +1,1 @@
+{"version":2,"operation":"insert-after-unique","path":"sentient-orchestrator/src/automatic-worker.ts","expected_source_git_blob_sha":"2c98b29e7b9afe92ff4f8c13d8ac8219beccc70a","anchor":"const workers = new WorkerStore(pool);","insertion":"\nconst coordination = new SentientCoordinationService(pool);"}

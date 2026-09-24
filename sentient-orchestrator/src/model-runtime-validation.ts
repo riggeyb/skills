@@ -21,6 +21,7 @@ const MODEL_RESULT_KEYS = new Set([
   "handoff",
   "failureReason",
   "usage",
+  "coordinationActions",
 ]);
 
 export interface NormalizedModelResult {

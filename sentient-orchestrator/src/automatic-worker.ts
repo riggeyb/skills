@@ -7,6 +7,7 @@ import {
   ModelExecutionAdapterRegistry,
 } from "./model-execution.js";
 import { ModelBackedWorkerRuntime } from "./model-backed-worker-runtime.js";
+import { SentientCoordinationService } from "./sentient-coordination.js";
 import { PostgresTaskStore } from "./postgres.js";
 import { RenewablePostgresJobQueue } from "./renewable-postgres-queue.js";
 import { SupervisedDemoRuntime } from "./supervised-demo-runtime.js";
@@ -23,6 +24,7 @@ const tasks = new PostgresTaskStore(pool);
 const bootstrapper = new TaskBootstrapper(tasks);
 
 const workers = new WorkerStore(pool);
+const coordination = new SentientCoordinationService(pool);
 const modelEndpoint = process.env.MODEL_RUNTIME_ENDPOINT?.trim();
 let workerCapabilities = ["demo-agent"];
 const runtimeList: WorkerRuntime[] = [new SupervisedDemoRuntime(["lead-control"])];
@@ -43,7 +45,11 @@ if (modelEndpoint) {
     modelTiers: parseCsv(process.env.MODEL_RUNTIME_MODEL_TIERS),
   });
   runtimeList.push(
-    new ModelBackedWorkerRuntime(pool, new ModelExecutionAdapterRegistry([adapter])),
+    new ModelBackedWorkerRuntime(
+      pool,
+      new ModelExecutionAdapterRegistry([adapter]),
+      coordination,
+    ),
   );
 } else {
   runtimeList[0] = new SupervisedDemoRuntime();

@@ -1,0 +1,1 @@
+{"version":2,"operation":"replace-unique","path":"sentient-orchestrator/src/model-backed-worker-runtime.ts","expected_source_git_blob_sha":"37d1e530996b920b62bd1ea1e6422a0a456475c6","old":"          \"failureReason\",\n          \"usage\",\n        ],","new":"          \"failureReason\",\n          \"usage\",\n          \"coordinationActions\",\n        ],"}
