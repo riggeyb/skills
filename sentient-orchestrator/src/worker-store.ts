@@ -96,13 +96,37 @@ export class WorkerStore {
   async dependencies(id: string) {
     return (
       await this.db.query(
-        `SELECT w.id,w.status
+        `SELECT w.id,
+                CASE
+                  WHEN w.status='waiting'
+                   AND w.runtime_id='model-backed'
+                   AND EXISTS(
+                     SELECT 1
+                     FROM worker_runtime_executions e
+                     WHERE e.worker_id=w.id AND e.status='completed'
+                   )
+                  THEN 'completed'
+                  ELSE w.status
+                END AS status
          FROM worker_dependencies d
          JOIN sentient_workers w ON w.id=d.depends_on_worker_id
          WHERE d.spawn_request_id=$1`,
         [id],
        )
     ).rows;
+  }
+
+  async coordinationActivationOwns(workerId: string, handle: string): Promise<boolean> {
+    const result = await this.db.query(
+      `SELECT 1
+       FROM sentient_coordination_activations
+       WHERE recipient_worker_id=$1
+         AND runtime_handle=$2
+         AND state='running'
+       LIMIT 1`,
+      [workerId, handle],
+    );
+    return Boolean(result.rowCount);
   }
 
   async block(id: string, reason: string, recheckMs = 1_000) {
