@@ -124,6 +124,7 @@ export class AutomaticLeadSupervisor {
     }
     await this.leads.markIntegrationReady(task.id, leadership.leadWorkerId, leadership.epoch);
     await this.setTaskStatus(task.id, "completed");
+    await this.retireWaitingWorkers(task.id);
     await this.systemMessage(task.id, "Lead Sentient accepted all required handoffs and marked integration ready.");
     return { taskId: task.id, action: "integration_ready" };
   }
