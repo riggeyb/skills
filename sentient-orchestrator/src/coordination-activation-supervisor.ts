@@ -146,6 +146,7 @@ export class CoordinationActivationSupervisor {
     }
 
     let handle: string | undefined;
+    let bound = false;
     try {
       const activated = await runtime.activate(worker, requirements, {
         activationId: activation.activation_id,
@@ -153,7 +154,7 @@ export class CoordinationActivationSupervisor {
         activationAttempt: Number(activation.activation_attempts),
       });
       handle = activated.handle;
-      const bound = await this.claims.bindRunning(
+      bound = await this.claims.bindRunning(
         activation.activation_id,
         worker.id,
         handle,
@@ -168,7 +169,9 @@ export class CoordinationActivationSupervisor {
           false,
           this.retryBackoffMs,
         );
+        return;
       }
+      await runtime.assign(handle, worker.assignment);
     } catch (error) {
       if (handle) {
         try {
@@ -178,6 +181,23 @@ export class CoordinationActivationSupervisor {
         }
       }
       const reason = error instanceof Error ? error.message : String(error);
+      if (bound && handle) {
+        let spentUsd = 0;
+        try {
+          spentUsd = (await runtime.inspect(handle)).spentUsd ?? 0;
+        } catch {
+          // Preserve zero when no spend can be read.
+        }
+        await this.settlements.finish(
+          activation.activation_id,
+          handle,
+          false,
+          reason,
+          spentUsd,
+          this.retryBackoffMs,
+        );
+        return;
+      }
       const forceDeadLetter =
         reason.includes("budget") ||
         reason.includes("capability_boundary") ||
