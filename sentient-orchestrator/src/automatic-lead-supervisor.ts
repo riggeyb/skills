@@ -245,7 +245,10 @@ export class AutomaticLeadSupervisor {
         continue;
       }
 
-      if (row.worker_status === "completed" && ["assigned","acknowledged","in_progress","blocked","rework"].includes(row.status)) {
+      if (
+        ["completed","waiting"].includes(row.worker_status ?? "") &&
+        ["assigned","acknowledged","in_progress","blocked","rework"].includes(row.status)
+      ) {
         const attemptCount = row.attempt_count ?? 1;
         const fallbackHandoff = {
           handoffId: `worker:${row.worker_id}:attempt:${attemptCount}`,
