@@ -1,0 +1,1 @@
+{"version":2,"operation":"replace-unique","path":"sentient-orchestrator/src/coordination-activation-watchdog.ts","expected_source_git_blob_sha":"b0f7e497c80e528438dabc63c8fc50551ff830e1","old":"return inserted.rowCount+reset.rowCount;","new":"return (inserted.rowCount ?? 0)+(reset.rowCount ?? 0);"}
