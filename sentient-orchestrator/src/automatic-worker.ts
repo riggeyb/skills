@@ -24,6 +24,7 @@ const tasks = new PostgresTaskStore(pool);
 const bootstrapper = new TaskBootstrapper(tasks);
 
 const workers = new WorkerStore(pool);
+const coordination = new SentientCoordinationService(pool);
 const modelEndpoint = process.env.MODEL_RUNTIME_ENDPOINT?.trim();
 let workerCapabilities = ["demo-agent"];
 const runtimeList: WorkerRuntime[] = [new SupervisedDemoRuntime(["lead-control"])];
