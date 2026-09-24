@@ -50,14 +50,15 @@ test("activation trigger cannot starve behind more than 150 older inbox messages
       payload: { question: "This trigger must not starve." },
     });
 
-    const completedBacklog = await db.query(
+    const retiredBacklog = await db.query(
       `UPDATE sentient_coordination_activations
-       SET state='completed',completed_at=now(),updated_at=now()
+       SET state='dead_letter',last_error='starvation_fixture_retired_activation',
+           completed_at=now(),updated_at=now()
        WHERE recipient_worker_id=$1 AND message_id=ANY($2::uuid[])
        RETURNING activation_id`,
       [recipient.id, backlogIds],
     );
-    assert.equal(completedBacklog.rowCount, backlogIds.length);
+    assert.equal(retiredBacklog.rowCount, backlogIds.length);
 
     let adapterCalls = 0;
     const adapter: ModelExecutionAdapter = {
