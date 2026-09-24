@@ -45,7 +45,11 @@ if (modelEndpoint) {
     modelTiers: parseCsv(process.env.MODEL_RUNTIME_MODEL_TIERS),
   });
   runtimeList.push(
-    new ModelBackedWorkerRuntime(pool, new ModelExecutionAdapterRegistry([adapter])),
+    new ModelBackedWorkerRuntime(
+      pool,
+      new ModelExecutionAdapterRegistry([adapter]),
+      coordination,
+    ),
   );
 } else {
   runtimeList[0] = new SupervisedDemoRuntime();
