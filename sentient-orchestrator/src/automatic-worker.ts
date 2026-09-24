@@ -7,6 +7,7 @@ import {
   ModelExecutionAdapterRegistry,
 } from "./model-execution.js";
 import { ModelBackedWorkerRuntime } from "./model-backed-worker-runtime.js";
+import { SentientCoordinationService } from "./sentient-coordination.js";
 import { PostgresTaskStore } from "./postgres.js";
 import { RenewablePostgresJobQueue } from "./renewable-postgres-queue.js";
 import { SupervisedDemoRuntime } from "./supervised-demo-runtime.js";
