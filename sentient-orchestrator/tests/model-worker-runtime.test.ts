@@ -409,6 +409,10 @@ test("automatic Lead does not accept a completed model worker without its bound 
     for (let i = 0; i < 100; i++) {
       await lead.tick();
       await scheduleOneForTask(db, workers, runtimes, task.id);
+      // Bind a newly scheduled worker while its durable worker row is still
+      // running. The subsequent reconciliation can then expose the precise
+      // completed-before-Lead-review state this regression exercises.
+      await lead.tick();
       await reconciler.tick();
 
       const candidate = await db.query(
@@ -446,7 +450,6 @@ test("automatic Lead does not accept a completed model worker without its bound 
         break;
       }
 
-      await lead.tick();
       await new Promise((resolve) => setTimeout(resolve, 2));
     }
 
