@@ -1,5 +1,6 @@
 import { createDatabasePool } from "./db.js";
 import { AutomaticLeadSupervisor } from "./automatic-lead-supervisor.js";
+import { CoordinationActivationSupervisor } from "./coordination-activation-supervisor.js";
 import { runControlPlaneLoop } from "./control-plane-loop.js";
 import { LeadOrchestrationStore } from "./lead-orchestration.js";
 import {
