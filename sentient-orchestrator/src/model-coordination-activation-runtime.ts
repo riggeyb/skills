@@ -155,7 +155,23 @@ export class ModelCoordinationActivationRuntime {
       await this.failUnknownInFlight(handle);
       throw new Error("runtime_restart_unknown_outcome");
     }
+    return { handle };
+  }
 
+  async start(handle: string, assignment: unknown): Promise<void> {
+    let execution = await this.loadExecution(handle);
+    if (execution.assignment_hash !== digest(assignment)) {
+      throw new Error("assignment_boundary_violation");
+    }
+    if (isTerminal(execution.status)) return;
+    if (execution.status === "running") {
+      if (this.active.has(handle)) return;
+      await this.failUnknownInFlight(handle);
+      throw new Error("runtime_restart_unknown_outcome");
+    }
+
+    const adapter = this.adapters.get(execution.adapter_id);
+    if (!adapter) throw new Error(`unknown_model_adapter:${execution.adapter_id}`);
     await this.db.query(
       `UPDATE worker_coordination_runtime_executions
        SET status='running',started_at=coalesce(started_at,now()),updated_at=now()
@@ -168,7 +184,6 @@ export class ModelCoordinationActivationRuntime {
     const promise = this.execute(handle, execution.request, adapter, controller)
       .finally(() => this.active.delete(handle));
     this.active.set(handle, { controller, promise });
-    return { handle };
   }
 
   async inspect(handle: string): Promise<WorkerRuntimeState> {
