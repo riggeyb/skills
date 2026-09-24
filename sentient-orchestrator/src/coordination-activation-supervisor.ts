@@ -72,7 +72,36 @@ export class CoordinationActivationSupervisor {
       }
 
       const state = await runtime.inspect(row.runtime_handle);
-      if (state.status === "starting" || state.status === "running") {
+      if (state.status === "starting") {
+        try {
+          await runtime.assign(row.runtime_handle, worker.assignment);
+          await this.workers.heartbeat(worker.id, this.id, this.leaseMs, state.spentUsd);
+        } catch (error) {
+          const reason = error instanceof Error ? error.message : String(error);
+          try {
+            await runtime.cancel(row.runtime_handle, "coordination_activation_start_failed");
+          } catch {
+            // Settlement below is authoritative; cancellation is best effort.
+          }
+          let spentUsd = state.spentUsd ?? 0;
+          try {
+            spentUsd = (await runtime.inspect(row.runtime_handle)).spentUsd ?? spentUsd;
+          } catch {
+            // Preserve last known spend.
+          }
+          await this.settlements.finish(
+            row.activation_id,
+            row.runtime_handle,
+            false,
+            reason,
+            spentUsd,
+            this.retryBackoffMs,
+          );
+          changed++;
+        }
+        continue;
+      }
+      if (state.status === "running") {
         await this.workers.heartbeat(worker.id, this.id, this.leaseMs, state.spentUsd);
         continue;
       }
