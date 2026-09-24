@@ -43,6 +43,7 @@ function request(capabilities = ["repo-read"]): ModelExecutionRequest {
         "handoff",
         "failureReason",
         "usage",
+        "coordinationActions",
       ],
     },
   };
