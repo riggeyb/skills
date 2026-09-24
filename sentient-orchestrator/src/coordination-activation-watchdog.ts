@@ -40,7 +40,7 @@ export class CoordinationActivationWatchdog {
          AND w.status NOT IN('completed','failed','cancelled','expired')
          AND t.status=ANY($1::text[])
        RETURNING a.activation_id`,[ACTIVE_TASKS]);
-    return inserted.rowCount+reset.rowCount;
+    return (inserted.rowCount ?? 0)+(reset.rowCount ?? 0);
   }
 
   async deadLetterTerminalRecipients():Promise<number>{
