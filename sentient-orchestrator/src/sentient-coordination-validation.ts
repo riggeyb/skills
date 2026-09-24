@@ -82,5 +82,5 @@ export function assertIdempotentMessage(row:any,w:DurableCoordinationWorker,d:Co
     row.correlation_id===correlationId&&(row.causation_id??null)===(d.causationId??null)&&
     (row.sender_leadership_epoch==null?d.leadershipEpoch==null:Number(row.sender_leadership_epoch)===d.leadershipEpoch)&&
     stableJson(row.payload)===stableJson(d.payload);
-  if(!same)throw new CoordinationError("MESSAGE_ID_CONFLICT","message id already bound to diffferent content");
+  if(!same)throw new CoordinationError("MESSAGE_ID_CONFLICT","message id already bound to different content");
 }
