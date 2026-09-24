@@ -144,6 +144,10 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
   }
 
   async assign(handle: string, assignment: unknown): Promise<void> {
+    if (this.coordinationActivations.owns(handle)) {
+      await this.coordinationActivations.start(handle, assignment);
+      return;
+    }
     let execution = await this.loadExecution(handle);
     if (execution.assignment_hash !== digest(assignment)) {
       throw new Error("assignment_boundary_violation");
