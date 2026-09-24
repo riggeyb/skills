@@ -33,6 +33,7 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
   constructor(
     private readonly db: Pool,
     private readonly adapters: ModelExecutionAdapterRegistry,
+    private readonly coordination?: SentientCoordinationService,
   ) {}
 
   compatible(requirements: RuntimeRequirements): boolean {
