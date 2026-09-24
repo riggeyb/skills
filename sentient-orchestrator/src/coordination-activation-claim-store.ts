@@ -73,7 +73,7 @@ export class CoordinationActivationClaimStore{
              last_error='activation_claim_expired_before_runtime_start',updated_at=now()
          WHERE activation_id=$1 AND state='claimed' AND claim_expires_at<=now()
          RETURNING activation_id`,[row.activation_id]);
-      changed+=reset.rowCount;
+      changed+=reset.rowCount ?? 0;
     }
     return changed;
   }
