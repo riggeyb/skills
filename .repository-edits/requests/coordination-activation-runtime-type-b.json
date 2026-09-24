@@ -1,0 +1,1 @@
+{"version":2,"operation":"insert-before-unique","path":"sentient-orchestrator/src/worker-control.ts","expected_source_git_blob_sha":"849c0092056ff78bf46551b69b87415f1c1477bd","anchor":"export interface WorkerRuntime {","insertion":"export interface WorkerActivationRequest {\n  activationId: string;\n  triggerMessageId: string;\n  activationAttempt: number;\n}\n\n"}

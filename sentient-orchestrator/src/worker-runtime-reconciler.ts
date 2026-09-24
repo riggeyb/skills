@@ -37,6 +37,7 @@ export class WorkerRuntimeReconciler {
     for (const row of rows.rows) {
       const worker = await this.store.get(row.id);
       if (!worker.runtimeId || !worker.runtimeHandle) continue;
+      if (await this.store.coordinationActivationOwns(worker.id, worker.runtimeHandle)) continue;
       const runtime = this.runtimes.get(worker.runtimeId);
       if (!runtime) continue;
 
@@ -51,7 +52,11 @@ export class WorkerRuntimeReconciler {
         );
       }
       if (state.status === "completed") {
-        await this.store.transition(worker.id, "completed");
+        if (worker.runtimeId === "model-backed" && worker.role !== "lead") {
+          await this.store.waitForCoordination(worker.id);
+        } else {
+          await this.store.transition(worker.id, "completed");
+        }
         changed++;
         continue;
       }

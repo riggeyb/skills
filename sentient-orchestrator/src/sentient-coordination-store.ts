@@ -102,6 +102,14 @@ export class SentientCoordinationStore {
       await c.query(
         `INSERT INTO sentient_coordination_deliveries(message_id,recipient_worker_id)
          VALUES($1,$2) ON CONFLICT DO NOTHING`, [messageId,x.id]);
+      await c.query(
+        `INSERT INTO sentient_coordination_activations(
+           activation_id,message_id,recipient_worker_id
+         )
+         VALUES('coord:' || $1::text || ':' || $2::text,$1::uuid,$2::uuid)
+         ON CONFLICT(message_id,recipient_worker_id) DO NOTHING`,
+        [messageId,x.id],
+      );
     }
     if (r.rowCount) await this.audit(c,sender.task_id,sender.id,"COORDINATION_MESSAGE_SENT",{
       messageId,type:draft.type,targetKind:draft.target.kind,recipients:recipients.map(x=>x.id),
@@ -110,7 +118,10 @@ export class SentientCoordinationStore {
     return mapCoordinationMessage(row);
   }
 
-  async deliver(c: PoolClient, recipient: DurableCoordinationWorker, limit: number, afterMs: number): Promise<CoordinationDelivery[]> {
+  async deliver(
+    c: PoolClient, recipient: DurableCoordinationWorker, limit: number, afterMs: number,
+    requiredMessageId?: string,
+  ): Promise<CoordinationDelivery[]> {
     if (TERMINAL.has(recipient.status)) {
       await c.query(
         `UPDATE sentient_coordination_deliveries
@@ -124,7 +135,9 @@ export class SentientCoordinationStore {
          FROM sentient_coordination_deliveries d
          JOIN sentient_coordination_messages m ON m.message_id=d.message_id
          WHERE d.recipient_worker_id=$1 AND d.state IN('pending','delivered') AND d.next_delivery_at<=now()
-         ORDER BY m.created_at,m.message_id FOR UPDATE OF d SKIP LOCKED LIMIT $2
+           AND d.delivery_attempts<d.max_delivery_attempts
+         ORDER BY CASE WHEN d.message_id=$4::uuid THEN 0 ELSE 1 END,m.created_at,m.message_id
+         FOR UPDATE OF d SKIP LOCKED LIMIT $2
        ), delivered AS (
          UPDATE sentient_coordination_deliveries d SET
            state='delivered',delivery_attempts=d.delivery_attempts+1,
@@ -136,8 +149,16 @@ export class SentientCoordinationStore {
        )
        SELECT m.*,d.state,d.delivery_attempts,d.first_delivered_at,d.last_delivered_at,d.acknowledged_at
        FROM delivered d JOIN sentient_coordination_messages m ON m.message_id=d.message_id
-       ORDER BY m.created_at,m.message_id`,[recipient.id,limit,afterMs]);
-    return r.rows.map(mapDelivery);
+       ORDER BY CASE WHEN m.message_id=$4::uuid THEN 0 ELSE 1 END,m.created_at,m.message_id`,
+      [recipient.id,limit,afterMs,requiredMessageId??null]);
+    const deliveries=r.rows.map(mapDelivery);
+    if (requiredMessageId && !deliveries.some(d=>d.message.messageId===requiredMessageId)) {
+      throw new CoordinationError(
+        "REQUIRED_MESSAGE_NOT_DELIVERED",
+        "required activation trigger was not available in the bounded inbox",
+      );
+    }
+    return deliveries;
   }
 
   async acknowledge(c: PoolClient, recipient: DurableCoordinationWorker, messageId: string) {
@@ -154,6 +175,13 @@ export class SentientCoordinationStore {
     await c.query(
       `UPDATE sentient_coordination_deliveries SET state='acknowledged',acknowledged_at=now()
        WHERE message_id=$1 AND recipient_worker_id=$2`,[messageId,recipient.id]);
+    await c.query(
+      `UPDATE sentient_coordination_activations
+       SET state='completed',claim_owner=NULL,claim_expires_at=NULL,runtime_handle=NULL,
+           completed_at=coalesce(completed_at,now()),updated_at=now()
+       WHERE message_id=$1 AND recipient_worker_id=$2 AND state='pending'`,
+      [messageId,recipient.id],
+    );
     await this.audit(c,recipient.task_id,recipient.id,"COORDINATION_MESSAGE_ACKNOWLEDGED",{messageId});
     return {acknowledged:true as const,alreadyAcknowledged:false};
   }

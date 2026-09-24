@@ -1,5 +1,6 @@
 import { createDatabasePool } from "./db.js";
 import { AutomaticLeadSupervisor } from "./automatic-lead-supervisor.js";
+import { CoordinationActivationSupervisor } from "./coordination-activation-supervisor.js";
 import { runControlPlaneLoop } from "./control-plane-loop.js";
 import { LeadOrchestrationStore } from "./lead-orchestration.js";
 import {
@@ -83,6 +84,18 @@ const leadSupervisor = new AutomaticLeadSupervisor(
   },
 );
 
+const coordinationActivation = new CoordinationActivationSupervisor(
+  pool,
+  workers,
+  runtimes,
+  process.env.COORDINATION_ACTIVATION_ID ?? `coordination-${process.pid}`,
+  {
+    leaseMs: Number(process.env.COORDINATION_ACTIVATION_LEASE_MS ?? workerLeaseMs),
+    batchSize: Number(process.env.COORDINATION_ACTIVATION_BATCH_SIZE ?? 32),
+    retryBackoffMs: Number(process.env.COORDINATION_ACTIVATION_RETRY_BACKOFF_MS ?? 1_000),
+  },
+);
+
 const controller = new AbortController();
 for (const signal of ["SIGTERM", "SIGINT"] as const) {
   process.once(signal, () => controller.abort());
@@ -99,6 +112,7 @@ try {
     runControlPlaneLoop(scheduler, runtimeReconciler, leadSupervisor, workerSupervisor, {
       pollMs: Number(process.env.CONTROL_PLANE_POLL_MS ?? 250),
       signal: controller.signal,
+      coordinationActivation,
     }),
   ]);
 } finally {

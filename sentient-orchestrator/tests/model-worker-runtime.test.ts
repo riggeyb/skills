@@ -192,7 +192,7 @@ test("model-backed runtime preserves durable Sentient identity and returns a str
     const reconciler = new WorkerRuntimeReconciler(db, scheduled.store, scheduled.runtimes);
     assert.equal(await reconciler.tick(), 1);
     const durableWorker = await scheduled.store.get(scheduled.worker.id);
-    assert.equal(durableWorker.status, "completed");
+    assert.equal(durableWorker.status, "waiting");
     assert.equal(durableWorker.spentUsd, 0.42);
 
     const execution = await db.query(
@@ -421,7 +421,7 @@ test("automatic Lead does not accept a completed model worker without its bound 
          JOIN sentient_workers sw ON sw.id=wa.target_worker_id
          WHERE wa.task_id=$1
            AND sw.role<>'lead'
-           AND sw.status='completed'
+           AND sw.status='waiting'
            AND wa.status<>'accepted'
          ORDER BY wa.created_at,wa.id
          LIMIT 1`,
@@ -430,7 +430,7 @@ test("automatic Lead does not accept a completed model worker without its bound 
       if (candidate.rowCount === 1) {
         const row = candidate.rows[0];
         assert.equal(row.runtime_id, "model-backed");
-        assert.equal(row.worker_status, "completed");
+        assert.equal(row.worker_status, "waiting");
 
         await db.query(`DELETE FROM worker_runtime_executions WHERE worker_id=$1`, [row.worker_id]);
         await lead.tick();

@@ -14,7 +14,11 @@ export async function prepareModelCoordination(
     repository: request.identity.repository,
     attemptCount: request.identity.attemptCount,
   });
-  const pending = await channel.inbox();
+  const pending = await channel.inbox(
+    request.coordinationActivation
+      ? { requiredMessageId: request.coordinationActivation.triggerMessageId }
+      : undefined,
+  );
   return {
     channel,
     request: {

@@ -124,6 +124,7 @@ export class AutomaticLeadSupervisor {
     }
     await this.leads.markIntegrationReady(task.id, leadership.leadWorkerId, leadership.epoch);
     await this.setTaskStatus(task.id, "completed");
+    await this.retireWaitingWorkers(task.id);
     await this.systemMessage(task.id, "Lead Sentient accepted all required handoffs and marked integration ready.");
     return { taskId: task.id, action: "integration_ready" };
   }
@@ -245,7 +246,10 @@ export class AutomaticLeadSupervisor {
         continue;
       }
 
-      if (row.worker_status === "completed" && ["assigned","acknowledged","in_progress","blocked","rework"].includes(row.status)) {
+      if (
+        ["completed","waiting"].includes(row.worker_status ?? "") &&
+        ["assigned","acknowledged","in_progress","blocked","rework"].includes(row.status)
+      ) {
         const attemptCount = row.attempt_count ?? 1;
         const fallbackHandoff = {
           handoffId: `worker:${row.worker_id}:attempt:${attemptCount}`,
@@ -460,6 +464,19 @@ export class AutomaticLeadSupervisor {
       `UPDATE tasks SET status=$2,updated_at=now() WHERE id=$1 AND status<>$2`,
       [taskId, status],
     );
+  }
+
+  private async retireWaitingWorkers(taskId: string): Promise<void> {
+    const waiting = await this.db.query(
+      `SELECT id
+       FROM sentient_workers
+       WHERE task_id=$1 AND status='waiting'
+       ORDER BY created_at,id`,
+      [taskId],
+    );
+    for (const row of waiting.rows) {
+      await this.workers.transition(row.id, "completed");
+    }
   }
 
   private async systemMessage(taskId: string, body: string): Promise<void> {

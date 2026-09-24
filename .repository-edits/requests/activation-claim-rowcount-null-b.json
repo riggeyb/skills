@@ -1,0 +1,1 @@
+{"version":2,"operation":"replace-unique","path":"sentient-orchestrator/src/coordination-activation-claim-store.ts","expected_source_git_blob_sha":"91a3b79c1b116794ca9e81c889ca0f1bb6194dfb","old":"      changed+=reset.rowCount;","new":"      changed+=reset.rowCount ?? 0;"}

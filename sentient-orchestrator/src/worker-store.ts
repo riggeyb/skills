@@ -96,13 +96,37 @@ export class WorkerStore {
   async dependencies(id: string) {
     return (
       await this.db.query(
-        `SELECT w.id,w.status
+        `SELECT w.id,
+                CASE
+                  WHEN w.status='waiting'
+                   AND w.runtime_id='model-backed'
+                   AND EXISTS(
+                     SELECT 1
+                     FROM worker_runtime_executions e
+                     WHERE e.worker_id=w.id AND e.status='completed'
+                   )
+                  THEN 'completed'
+                  ELSE w.status
+                END AS status
          FROM worker_dependencies d
          JOIN sentient_workers w ON w.id=d.depends_on_worker_id
          WHERE d.spawn_request_id=$1`,
         [id],
        )
     ).rows;
+  }
+
+  async coordinationActivationOwns(workerId: string, handle: string): Promise<boolean> {
+    const result = await this.db.query(
+      `SELECT 1
+       FROM sentient_coordination_activations
+       WHERE recipient_worker_id=$1
+         AND runtime_handle=$2
+         AND state='running'
+       LIMIT 1`,
+      [workerId, handle],
+    );
+    return Boolean(result.rowCount);
   }
 
   async block(id: string, reason: string, recheckMs = 1_000) {
@@ -208,6 +232,39 @@ export class WorkerStore {
     return this.transition(id, "starting");
   }
 
+  async waitForCoordination(id: string, reason = "runtime_completed"): Promise<SentientWorker> {
+    const client = await this.db.connect();
+    try {
+      await client.query("BEGIN");
+      const current = await client.query(
+        `SELECT * FROM sentient_workers WHERE id=$1 FOR UPDATE`,
+        [id],
+      );
+      if (!current.rowCount) throw new Error("Unknown worker");
+      assertWorkerTransition(current.rows[0].status, "waiting");
+      const result = await client.query(
+        `UPDATE sentient_workers
+         SET status='waiting',
+             runtime_handle=NULL,
+             lease_owner=NULL,
+             lease_expires_at=NULL,
+             last_heartbeat_at=now()
+         WHERE id=$1
+         RETURNING *`,
+        [id],
+      );
+      await client.query("COMMIT");
+      const worker = map(result.rows[0]);
+      await this.event(worker.taskId, "WORKER_WAITING", worker.id, { reason });
+      return worker;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async heartbeat(id: string, owner: string, ms = 60_000, spent?: number) {
     const result = await this.db.query(
       `UPDATE sentient_workers
@@ -227,9 +284,16 @@ export class WorkerStore {
   async stale() {
     return (
       await this.db.query(
-        `SELECT * FROM sentient_workers
-         WHERE status IN('starting','running','blocked','waiting')
-           AND lease_expires_at<=now()`,
+        `SELECT w.* FROM sentient_workers w
+         WHERE w.status IN('starting','running','blocked','waiting')
+           AND w.lease_expires_at<=now()
+           AND NOT EXISTS (
+             SELECT 1
+             FROM sentient_coordination_activations a
+             WHERE a.recipient_worker_id=w.id
+               AND a.state='running'
+               AND a.runtime_handle=w.runtime_handle
+           )`,
       )
     ).rows.map(map);
   }

@@ -94,11 +94,22 @@ export interface WorkerRuntimeState {
   result?: WorkerExecutionResult;
 }
 
+export interface WorkerActivationRequest {
+  activationId: string;
+  triggerMessageId: string;
+  activationAttempt: number;
+}
+
 export interface WorkerRuntime {
   readonly id: string;
   compatible(requirements: RuntimeRequirements): boolean;
   spawn(worker: SentientWorker, requirements: RuntimeRequirements): Promise<{ handle: string }>;
   assign(handle: string, assignment: unknown): Promise<void>;
+  activate?(
+    worker: SentientWorker,
+    requirements: RuntimeRequirements,
+    activation: WorkerActivationRequest,
+  ): Promise<{ handle: string }>;
   inspect(handle: string): Promise<WorkerRuntimeState>;
   cancel(handle: string, reason: string): Promise<void>;
   terminate(handle: string, reason: string): Promise<void>;

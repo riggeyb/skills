@@ -4,7 +4,6 @@ import type {
   RuntimeRequirements,
   SentientWorker,
   WorkerActivationRequest,
-  WorkerRuntime,
   WorkerRuntimeState,
 } from "./worker-control.js";
 import {
@@ -20,7 +19,6 @@ import {
   applyModelCoordinationActions,
   prepareModelCoordination,
 } from "./model-coordination.js";
-import { ModelCoordinationActivationRuntime } from "./model-coordination-activation-runtime.js";
 import type { SentientCoordinationService } from "./sentient-coordination.js";
 
 interface ActiveExecution {
@@ -28,48 +26,52 @@ interface ActiveExecution {
   promise: Promise<void>;
 }
 
-export class ModelBackedWorkerRuntime implements WorkerRuntime {
-  readonly id = "model-backed";
+export class ModelCoordinationActivationRuntime {
   private readonly active = new Map<string, ActiveExecution>();
-  private readonly coordinationActivations: ModelCoordinationActivationRuntime;
 
   constructor(
     private readonly db: Pool,
     private readonly adapters: ModelExecutionAdapterRegistry,
     private readonly coordination?: SentientCoordinationService,
-  ) {
-    this.coordinationActivations = new ModelCoordinationActivationRuntime(db, adapters, coordination);
+  ) {}
+
+  owns(handle: string): boolean {
+    return handle.startsWith("model:") && handle.includes(":coord:");
   }
 
-  compatible(requirements: RuntimeRequirements): boolean {
-    return this.adapters.select(requirements) !== null;
-  }
-
-  async spawn(
+  async activate(
     worker: SentientWorker,
     requirements: RuntimeRequirements,
+    activation: WorkerActivationRequest,
   ): Promise<{ handle: string }> {
     const adapter = this.adapters.select(requirements);
     if (!adapter) throw new Error("no_compatible_model_adapter");
+
     const durable = await this.loadDurableWorker(worker.id);
     this.assertIdentity(worker, durable);
+    if (!["waiting", "blocked"].includes(durable.status)) {
+      throw new Error(`coordination_worker_not_idle:${durable.status}`);
+    }
+
     const capabilities = stringArray(durable.capabilities);
     if (!requirements.capabilities.every((capability) => capabilities.includes(capability))) {
       throw new Error("worker_capability_boundary_violation");
     }
-    const budgetUsd = durable.budget_usd == null ? undefined : Number(durable.budget_usd);
-    if (
-      budgetUsd !== undefined &&
-      requirements.maxCostUsd !== undefined &&
-      requirements.maxCostUsd > budgetUsd
-    ) {
-      throw new Error("worker_budget_boundary_violation");
+
+    const totalBudgetUsd = durable.budget_usd == null ? undefined : Number(durable.budget_usd);
+    const alreadySpentUsd = Number(durable.spent_usd ?? 0);
+    const remainingBudgetUsd =
+      totalBudgetUsd === undefined ? undefined : Math.max(totalBudgetUsd - alreadySpentUsd, 0);
+    const turnBudgetUsd = minimumDefined(remainingBudgetUsd, requirements.maxCostUsd);
+    if (turnBudgetUsd !== undefined && !(turnBudgetUsd > 0)) {
+      throw new Error("coordination_budget_exhausted");
     }
 
-    const handle = `model:${worker.id}:attempt:${worker.attemptCount}`;
+    const handle =
+      `model:${worker.id}:coord:${activation.activationId}:attempt:${activation.activationAttempt}`;
     const request: ModelExecutionRequest = {
       executionId: handle,
-      idempotencyKey: `${worker.id}:${worker.attemptCount}`,
+      idempotencyKey: `${activation.activationId}:${activation.activationAttempt}`,
       identity: {
         workerId: worker.id,
         spawnRequestId: durable.spawn_request_id,
@@ -86,11 +88,12 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
         attemptCount: Number(durable.attempt_count),
       },
       assignment: durable.assignment,
+      coordinationActivation: activation,
       boundaries: {
         capabilities,
         authority: objectValue(durable.authority),
         workspace: durable.workspace_assignment ?? undefined,
-        budgetUsd,
+        budgetUsd: turnBudgetUsd,
         maxDurationMs: requirements.maxDurationMs,
       },
       responseContract: {
@@ -109,19 +112,21 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
         ],
       },
     };
+
     const requestHash = digest(request);
     const assignmentHash = digest(durable.assignment);
     await this.db.query(
-      `INSERT INTO worker_runtime_executions(
-         worker_id,runtime_handle,runtime_id,adapter_id,provider_id,model_id,
-         request,request_hash,assignment_hash,status
+      `INSERT INTO worker_coordination_runtime_executions(
+         runtime_handle,activation_id,worker_id,execution_attempt,runtime_id,
+         adapter_id,provider_id,model_id,request,request_hash,assignment_hash,status
        )
-       VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,'starting')
-       ON CONFLICT(worker_id) DO NOTHING`,
+       VALUES($1,$2,$3,$4,'model-backed',$5,$6,$7,$8::jsonb,$9,$10,'starting')
+       ON CONFLICT(activation_id,execution_attempt) DO NOTHING`,
       [
-        worker.id,
         handle,
-        this.id,
+        activation.activationId,
+        worker.id,
+        activation.activationAttempt,
         adapter.id,
         adapter.providerId,
         adapter.modelId ?? null,
@@ -130,24 +135,30 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
         assignmentHash,
       ],
     );
-    const existing = await this.loadExecution(handle);
+
+    let execution = await this.loadExecution(handle);
     if (
-      existing.worker_id !== worker.id ||
-      existing.runtime_id !== this.id ||
-      existing.adapter_id !== adapter.id ||
-      existing.request_hash !== requestHash ||
-      existing.assignment_hash !== assignmentHash
+      execution.activation_id !== activation.activationId ||
+      execution.worker_id !== worker.id ||
+      Number(execution.execution_attempt) !== activation.activationAttempt ||
+      execution.runtime_id !== "model-backed" ||
+      execution.adapter_id !== adapter.id ||
+      execution.request_hash !== requestHash ||
+      execution.assignment_hash !== assignmentHash
     ) {
-      throw new Error("runtime_execution_identity_conflict");
+      throw new Error("coordination_runtime_execution_identity_conflict");
+    }
+
+    if (isTerminal(execution.status)) return { handle };
+    if (execution.status === "running") {
+      if (this.active.has(handle)) return { handle };
+      await this.failUnknownInFlight(handle);
+      throw new Error("runtime_restart_unknown_outcome");
     }
     return { handle };
   }
 
-  async assign(handle: string, assignment: unknown): Promise<void> {
-    if (this.coordinationActivations.owns(handle)) {
-      await this.coordinationActivations.start(handle, assignment);
-      return;
-    }
+  async start(handle: string, assignment: unknown): Promise<void> {
     let execution = await this.loadExecution(handle);
     if (execution.assignment_hash !== digest(assignment)) {
       throw new Error("assignment_boundary_violation");
@@ -162,30 +173,20 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
     const adapter = this.adapters.get(execution.adapter_id);
     if (!adapter) throw new Error(`unknown_model_adapter:${execution.adapter_id}`);
     await this.db.query(
-      `UPDATE worker_runtime_executions
+      `UPDATE worker_coordination_runtime_executions
        SET status='running',started_at=coalesce(started_at,now()),updated_at=now()
        WHERE runtime_handle=$1 AND status='starting'`,
       [handle],
     );
     execution = await this.loadExecution(handle);
+
     const controller = new AbortController();
     const promise = this.execute(handle, execution.request, adapter, controller)
       .finally(() => this.active.delete(handle));
     this.active.set(handle, { controller, promise });
   }
 
-  async activate(
-    worker: SentientWorker,
-    requirements: RuntimeRequirements,
-    activation: WorkerActivationRequest,
-  ): Promise<{ handle: string }> {
-    return this.coordinationActivations.activate(worker, requirements, activation);
-  }
-
   async inspect(handle: string): Promise<WorkerRuntimeState> {
-    if (this.coordinationActivations.owns(handle)) {
-      return this.coordinationActivations.inspect(handle);
-    }
     let execution = await this.loadExecution(handle);
     if (execution.status === "running" && !this.active.has(handle)) {
       await this.failUnknownInFlight(handle);
@@ -200,13 +201,9 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
   }
 
   async cancel(handle: string, reason: string): Promise<void> {
-    if (this.coordinationActivations.owns(handle)) {
-      await this.coordinationActivations.cancel(handle, reason);
-      return;
-    }
     this.active.get(handle)?.controller.abort();
     await this.db.query(
-      `UPDATE worker_runtime_executions
+      `UPDATE worker_coordination_runtime_executions
        SET status='cancelled',failure_reason=$2,completed_at=now(),updated_at=now()
        WHERE runtime_handle=$1 AND status IN('starting','running')`,
       [handle, reason],
@@ -214,13 +211,9 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
   }
 
   async terminate(handle: string, reason: string): Promise<void> {
-    if (this.coordinationActivations.owns(handle)) {
-      await this.coordinationActivations.terminate(handle, reason);
-      return;
-    }
     this.active.get(handle)?.controller.abort();
     await this.db.query(
-      `UPDATE worker_runtime_executions
+      `UPDATE worker_coordination_runtime_executions
        SET status='failed',failure_reason=$2,completed_at=now(),updated_at=now()
        WHERE runtime_handle=$1 AND status IN('starting','running')`,
       [handle, reason],
@@ -240,6 +233,7 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
           controller.abort();
         }, request.boundaries.maxDurationMs)
       : undefined;
+
     try {
       const prepared = await prepareModelCoordination(this.coordination, request);
       const response = await adapter.execute(prepared.request, {
@@ -251,7 +245,7 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
       const status = result.status;
       const reason = status === "failed" ? result.failureReason ?? "model_execution_failed" : null;
       await this.db.query(
-        `UPDATE worker_runtime_executions
+        `UPDATE worker_coordination_runtime_executions
          SET status=$2,result=$3::jsonb,failure_reason=$4,spent_usd=greatest(spent_usd,$5),
              completed_at=now(),updated_at=now()
          WHERE runtime_handle=$1 AND status='running'`,
@@ -267,7 +261,7 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
             ? error.message
             : String(error);
       await this.db.query(
-        `UPDATE worker_runtime_executions
+        `UPDATE worker_coordination_runtime_executions
          SET status='failed',failure_reason=$2,spent_usd=greatest(spent_usd,$3),
              completed_at=now(),updated_at=now()
          WHERE runtime_handle=$1 AND status='running'`,
@@ -280,17 +274,17 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
 
   private async failUnknownInFlight(handle: string): Promise<void> {
     await this.db.query(
-      `UPDATE worker_runtime_executions
+      `UPDATE worker_coordination_runtime_executions
        SET status='failed',failure_reason='runtime_restart_unknown_outcome',
            completed_at=now(),updated_at=now()
-       WHERE runtime_handle=$1 AND status='running'`,
+       WHERE runtime_handle=$1 AND status IN('starting','running')`,
       [handle],
     );
   }
 
   private async loadExecution(handle: string): Promise<any> {
     const result = await this.db.query(
-      `SELECT * FROM worker_runtime_executions WHERE runtime_handle=$1`,
+      `SELECT * FROM worker_coordination_runtime_executions WHERE runtime_handle=$1`,
       [handle],
     );
     if (result.rowCount !== 1) throw new Error("unknown_runtime_handle");
@@ -327,6 +321,12 @@ export class ModelBackedWorkerRuntime implements WorkerRuntime {
 
 function isTerminal(status: string): boolean {
   return status === "completed" || status === "failed" || status === "cancelled";
+}
+
+function minimumDefined(a: number | undefined, b: number | undefined): number | undefined {
+  if (a === undefined) return b;
+  if (b === undefined) return a;
+  return Math.min(a, b);
 }
 
 function objectValue(value: unknown): Record<string, unknown> {
