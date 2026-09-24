@@ -286,7 +286,7 @@ async function createWorker(db: Pool, taskId: string, role: string): Promise<Sen
      RETURNING id`,
     [
       taskId, tenant, repository.owner, repository.repo, role, JSON.stringify(assignment),
-      ["coord-activation-test"], randomUUIJ(), correlationId,
+      ["coord-activation-test"], randomUUID(), correlationId,
     ],
   );
   const spawnRequestId = spawn.rows[0].id;
@@ -295,7 +295,7 @@ async function createWorker(db: Pool, taskId: string, role: string): Promise<Sen
        spawn_request_id,task_id,tenant,repository_owner,repository_name,role,assignment,status,
        runtime_id,capabilities,authority,budget_usd,attempt_count,correlation_id
       )
-     VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,, 'waiting','model-backed',$8,'{}'::jsonb,1,1,$9)
+     VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,'waiting','model-backed',$8,'{}'::jsonb,1,1,$9)
      RETURNING id`,
     [
       spawnRequestId, taskId, tenant, repository.owner, repository.repo, role, JSON.stringify(assignment),
