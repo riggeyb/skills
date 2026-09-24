@@ -466,6 +466,19 @@ export class AutomaticLeadSupervisor {
     );
   }
 
+  private async retireWaitingWorkers(taskId: string): Promise<void> {
+    const waiting = await this.db.query(
+      `SELECT id
+       FROM sentient_workers
+       WHERE task_id=$1 AND status='waiting'
+       ORDER BY created_at,id`,
+      [taskId],
+    );
+    for (const row of waiting.rows) {
+      await this.workers.transition(row.id, "completed");
+    }
+  }
+
   private async systemMessage(taskId: string, body: string): Promise<void> {
     await this.db.query(
       `INSERT INTO task_messages(task_id,role,body) VALUES($1,'system',$2)`,
