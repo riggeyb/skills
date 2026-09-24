@@ -13,9 +13,17 @@ AutomaticLeadSupervisor
   -> provider/local-model executor
 ```
 
-A model execution request carries the durable worker/task/tenant/repository/parent/coordinator/correlation identity, the exact assignment, allowed capabilities and authority, workspace boundary, budget, and duration. The response contract permits only status, conclusion, evidence, artifacts, tool results, handoff, failure reason, and usage. Private reasoning fields are rejected.
+A model execution request carries the durable worker/task/tenant/repository/parent/coordinator/correlation identity, the exact assignment, allowed capabilities and authority, workspace boundary, budget, and duration. When direct coordination is configured, the request also carries only structured pending deliveries plus the coordination behavior rule; it does not expose a provider-controlled sender identity. The response contract permits status, conclusion, evidence, artifacts, tool results, handoff, failure reason, usage, and bounded coordination actions. Private reasoning fields are rejected.
 
 The generic `HttpModelExecutionAdapter` speaks `sentient-model-execution/v1` and deliberately makes no OpenAI-specific assumptions. A provider adapter may instead be in-process or local as long as it implements `ModelExecutionAdapter`.
+
+## Direct Sentient coordination
+
+Never ask the human operator to relay a coordination message when an authorized Sentient coordination channel is available. Send it directly; escalate to the human only for decisions requiring human authority.
+
+`ModelBackedWorkerRuntime` binds coordination to the durable Sentient worker identity. Before model execution it polls the PostgreSQL-backed inbox and exposes pending structured messages plus the behavioral rule to the adapter. In-process adapters may also receive a worker-bound `SentientCoordinationChannel`. Remote/provider adapters can request only bounded `send` and `ack` coordination actions; the runtime resolves those actions through `SentientCoordinationService`, so provider/model identity never becomes the Sentient sender identity or Lead authority.
+
+The provider response is fully normalized and validated—including private-reasoning and budget checks—before any requested coordination action is persisted. Invalid responses therefore fail without creating coordination side effects. `DIRECTIVE` and `DECISION` messages remain fenced by the authoritative active Lead lease/epoch.
 
 ## Durability and safety
 
