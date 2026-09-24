@@ -1,0 +1,1 @@
+{"version":2,"operation":"insert-after-unique","path":"sentient-orchestrator/src/model-execution.ts","expected_source_git_blob_sha":"6ade63f7bf61977ddc34af95ce2da2f5bad8712b","anchor":"  assignment: unknown;","insertion":"\n  coordinationActivation?: {\n    activationId: string;\n    triggerMessageId: string;\n    activationAttempt: number;\n  };"}
